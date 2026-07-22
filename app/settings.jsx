@@ -1,29 +1,31 @@
-import {View, Text, StyleSheet} from "react-native";
 import React from "react";
+import { ScrollView } from "react-native";
 
-import NavBar from "../components/navbar.jsx";
+import styles from "../styles/settingsStyles";
 
-export default function Settings(){
-    return(
-        <View style={styles.container}>
-            <Text style={styles.title}>
-                Settings
-            </Text>
-            <NavBar />
-        </View>
-    )
+import SettingsHeader from "../components/settings/SettingsHeader";
+import ProfileCard from "../components/settings/ProfileCard";
+import SectionTitle from "../components/settings/SectionTitle";
+
+export default function Settings() {
+
+    return (
+
+        <ScrollView style={styles.container}>
+
+            <SettingsHeader />
+
+            <ProfileCard
+                name="Vitumbiko Kamanga"
+                email="vitumbiko@example.com"
+            />
+
+            <SectionTitle
+                title="ACCOUNT"
+            />
+
+        </ScrollView>
+
+    );
+
 }
-
-const styles = StyleSheet.create({
-    container:{
-        flex:1,
-        backgroundColor:"#ffffff",
-        alignItems:"center",
-        justifyContent:"center"
-    },
-    title:{
-        fontSize: 24,
-        fontWeight: "bold",
-        textAlign: "center",
-    }
-});

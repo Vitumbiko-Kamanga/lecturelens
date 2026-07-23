@@ -1,14 +1,16 @@
 import React from "react";
-import { TouchableOpacity, Text } from "react-native";
+import {TouchableOpacity, Text,} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import styles from "../../styles/settingsStyles";
 
-import styles from "../../styles/SettingsStyles";
-
-export default function LogoutButton() {
+export default function LogoutButton({onPress,}) {
 
     return (
 
-        <TouchableOpacity style={styles.logout}>
+        <TouchableOpacity
+            style={styles.logout}
+            onPress={onPress}
+        >
 
             <Ionicons
                 name="log-out-outline"
@@ -16,9 +18,7 @@ export default function LogoutButton() {
                 color="red"
             />
 
-            <Text style={styles.logoutText}>
-                Log Out
-            </Text>
+            <Text style={styles.logoutText}> Log Out </Text>
 
         </TouchableOpacity>
 

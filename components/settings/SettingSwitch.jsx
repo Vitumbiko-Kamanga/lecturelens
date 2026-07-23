@@ -1,8 +1,14 @@
 import React from "react";
-import { View, Text, Switch } from "react-native";
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    Switch,
+} from "react-native";
+
 import { Ionicons } from "@expo/vector-icons";
 
-import styles from "../../styles/SettingsStyles";
+import styles from "../../styles/settingsStyles";
 
 export default function SettingSwitch({
 
@@ -10,13 +16,16 @@ export default function SettingSwitch({
     title,
     subtitle,
     value,
-    onValueChange
+    onValueChange,
 
 }) {
 
     return (
 
-        <View style={styles.row}>
+        <TouchableOpacity
+            activeOpacity={1}
+            style={styles.row}
+        >
 
             <View style={styles.left}>
 
@@ -45,7 +54,7 @@ export default function SettingSwitch({
                 onValueChange={onValueChange}
             />
 
-        </View>
+        </TouchableOpacity>
 
     );
 

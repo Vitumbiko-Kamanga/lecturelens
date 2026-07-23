@@ -58,8 +58,8 @@ const styles = StyleSheet.create({
   },
 
   section: {
-    marginVertical: 15,
-    fontSize: 15,
+    marginVertical: 10,
+    fontSize: 12,
     fontWeight: "bold",
     color: "#777",
     letterSpacing: 1,
@@ -87,14 +87,14 @@ const styles = StyleSheet.create({
   },
 
   itemTitle: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 14,
+    fontWeight: "800",
     color: "#111",
   },
 
   itemSubtitle: {
     marginTop: 3,
-    fontSize: 13,
+    fontSize: 12,
     color: "#777",
   },
 
@@ -108,6 +108,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderWidth: 1,
     borderColor: "#FFD9D9",
+    marginBottom:100,
   },
 
   logoutText: {

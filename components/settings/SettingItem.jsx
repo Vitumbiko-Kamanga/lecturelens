@@ -2,9 +2,16 @@ import React from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-import styles from "../../styles/SettingsStyles";
+import styles from "../../styles/settingsStyles";
 
-export default function SettingItem({ icon, title, subtitle, onPress}) {
+export default function SettingItem({
+
+    icon,
+    title,
+    subtitle,
+    onPress,
+
+}) {
 
     return (
 

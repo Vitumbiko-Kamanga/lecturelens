@@ -75,6 +75,84 @@ const styles = StyleSheet.create({
         fontWeight:"600",
         color:"#374151",
     },
+// Recent Lectures
+    lectureCard:{
+        backgroundColor:"#FFFFFF",
+        borderRadius:20,
+        padding:20,
+        marginBottom:18,
+        elevation:2,
+    
+    },
+    cardHeader:{    
+        flexDirection:"row",
+        justifyContent:"space-between",
+        alignItems:"center",
+    },
+    lectureTitle:{
+        fontSize:16,
+        fontWeight:"700",
+        color:"#111827",
+    },
+    lectureDate:{
+        color:"#6B7280",
+        marginTop:5,
+    },
+    statusBadge:{
+        alignSelf:"flex-start",
+        paddingHorizontal:12,
+        paddingVertical:6,
+        borderRadius:20,
+        marginTop:15,
+    },
+    statusText:{
+        color:"#FFFFFF",
+        fontWeight:"600",
+    },
+    buttonRow:{
+        flexDirection:"row",
+        justifyContent:"space-between",
+        marginTop:20,
+    },
+    primaryButton:{
+        flex:1,
+        backgroundColor:"#2563EB",
+        padding:12,
+        borderRadius:12,
+        alignItems:"center",
+        marginRight:10,
+    },
+    secondaryButton:{
+        flex:1,
+        borderWidth:1,
+        borderColor:"#2563EB",
+        padding:12,
+        borderRadius:12,
+        alignItems:"center",
+    },
+    primaryButtonText:{
+        color:"#FFFFFF",
+        fontWeight:"700",
+    },
+    secondaryButtonText:{
+        color:"#2563EB",
+        fontWeight:"700",
+    },
+
+    // The floating Record Button
+    floatingButton:{
+        position:"absolute",
+        bottom:90,
+        right:25,
+        width:65,
+        height:65,
+        borderRadius:35,
+        backgroundColor:"#EF4444",
+        justifyContent:"center",
+        alignItems:"center",
+        elevation:8,
+    
+    },
 
 });
 

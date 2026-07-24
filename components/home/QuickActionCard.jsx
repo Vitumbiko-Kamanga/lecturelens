@@ -8,7 +8,7 @@ export default function QuickActionCard({
 
     icon,
     title,
-    color="#2563EB",
+    color,
     onPress,
 
 }){

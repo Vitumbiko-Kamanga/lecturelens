@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderWidth: 1,
     borderColor: "#FFD9D9",
-    marginBottom:100,
+    marginBottom:200,
   },
 
   logoutText: {

@@ -9,14 +9,11 @@ export default function RecentLectures(){
 
     return(
 
-        <View>
+        <View style={{marginBottom:200}}>
 
             <Text style={styles.sectionTitle}>
-
                 Recent Lectures
-
             </Text>
-
             <LectureCard
                 title="Database Systems"
                 date="Today"

@@ -17,7 +17,7 @@ export default function Home() {
 
             <ScrollView
                 style={styles.container}
-                showsVerticalScrollIndicator={false}
+                showsVerticalScrollIndicator={true}
             >
 
                 <HomeHeader userName="Vitumbiko" />
@@ -28,7 +28,7 @@ export default function Home() {
 
             <FloatingRecordButton />
             <NavBar />
-            
+
         </View>
 
     );

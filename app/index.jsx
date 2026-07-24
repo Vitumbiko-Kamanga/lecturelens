@@ -4,6 +4,7 @@ import { ScrollView } from "react-native";
 import NavBar from "../components/navbar";
 import HomeHeader from "../components/home/HomeHeader";
 import SearchBar from "../components/home/SearchBar";
+import QuickActions from "../components/home/QuickActions";
 
 import styles from "../styles/homeStyles";
 
@@ -18,6 +19,7 @@ export default function Home() {
 
             <HomeHeader userName="Vitumbiko" />
             <SearchBar />
+            <QuickActions />
 
             {/* <NavBar /> */}
 

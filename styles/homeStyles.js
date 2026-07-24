@@ -30,7 +30,7 @@ const styles = StyleSheet.create({
         color:"#2563EB",
         marginTop:2,
     },
-    
+// Search Bar styles
     searchSection:{
         flexDirection:"row",
         alignItems:"center",
@@ -46,6 +46,34 @@ const styles = StyleSheet.create({
         marginLeft:10,
         fontSize:16,
         color:"#111827",
+    },
+
+// Quick action Styles
+    sectionTitle:{
+        fontSize:16,
+        fontWeight:"700",
+        color:"#111827",
+        marginBottom:16,
+    },
+    actionsGrid:{
+        flexDirection:"row",
+        flexWrap:"wrap",
+        justifyContent:"space-between",
+    },
+    actionCard:{
+        width:"48%",
+        backgroundColor:"#FFFFFF",
+        paddingVertical:24,
+        borderRadius:18,
+        alignItems:"center",
+        marginBottom:15,
+        elevation:2,
+    },
+    actionTitle:{
+        marginTop:12,
+        fontSize:14,
+        fontWeight:"600",
+        color:"#374151",
     },
 
 });

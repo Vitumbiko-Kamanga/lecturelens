@@ -1,80 +1,28 @@
-import { StyleSheet, Text, View, Button,Image } from "react-native";
 import React from "react";
-import {Link} from "expo-router";
+import { ScrollView } from "react-native";
 
-import NavBar from "../components/navbar.jsx";
+import NavBar from "../components/navbar";
+import HomeHeader from "../components/home/HomeHeader";
+import SearchBar from "../components/home/SearchBar";
 
-export default function Home(){
+import styles from "../styles/homeStyles";
 
-    return(
-        
-        <View style={styles.container}>
+export default function Home() {
 
-            <Text style={styles.title}>
-                LectureLens
-            </Text>
+    return (
 
-            <Text style={styles.subtitle}>
-                Your AI Lecture Assistant
-            </Text>
+        <ScrollView
+            style={styles.container}
+            showsVerticalScrollIndicator={false}
+        >
 
-            <Text style={styles.btn}>
-                Get Started
-            </Text>
-            {/* <Link href="/notes">View Notes</Link> */}
-            {/* calling the navigation bar */}
-            <NavBar />
-            
-        </View>
+            <HomeHeader userName="Vitumbiko" />
+            <SearchBar />
+
+            {/* <NavBar /> */}
+
+        </ScrollView>
 
     );
 
 }
-
-
-
-const styles = StyleSheet.create({
-
-    container:{
-
-        flex:1,
-
-        backgroundColor:"#ffffff",
-
-        alignItems:"center",
-
-        justifyContent:"center"
-
-    },
-
-
-    title:{
-
-        fontSize:32,
-
-        fontWeight:"bold",
-
-        color:"#1e3a8a"
-
-    },
-
-
-    subtitle:{
-
-        fontSize:18,
-
-        marginTop:10,
-
-        color:"#555"
-
-    },
-    btn:{
-        padding:12,
-        backgroundColor:"#1e3a8a",
-        borderRadius:10,
-        marginTop:20,
-        color:"#fff",
-        fontWeight:"bold",
-    },
-
-});

@@ -1,14 +1,19 @@
 import { StyleSheet, Text, View,Image } from "react-native";
 import React from "react";
 import {Link} from "expo-router";
+import {Ionicons} from "@expo/vector-icons"
 
-export default function NavLink({img, title, href}){
+export default function NavLink({title, name, href}){
     return(
         
         <View style={styles.container}>
             <Link href={href}>
                 <View style={styles.link}>
-                    {img ? <Image source={img} style={styles.img} /> : null}
+                    <Ionicons
+                        name={name}
+                        size={25}
+                        color="#777"
+                    />
                     <Text style={styles.dashItem}>{title}</Text>
                 </View>
             </Link>

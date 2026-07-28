@@ -13,14 +13,12 @@ import styles from "../styles/homeStyles";
 export default function Home() {
 
     return (
-        <View style={{flex:1}}>
-
+        <View style={styles.main}>
+            <HomeHeader userName="Yashar" />
             <ScrollView
                 style={styles.container}
                 showsVerticalScrollIndicator={true}
             >
-
-                <HomeHeader userName="Vitumbiko" />
                 <SearchBar />
                 <QuickActions />
                 <RecentLectures />

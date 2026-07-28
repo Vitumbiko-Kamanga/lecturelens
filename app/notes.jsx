@@ -1,36 +1,43 @@
-import { ScrollView, View, Text, StyleSheet } from "react-native";
 import React from "react";
+import { View, ScrollView } from "react-native";
 
-import NavBar from "../components/navbar.jsx";
+import HomeHeader from "../components/home/HomeHeader";
+import SearchBar from "../components/home/SearchBar";
 import FloatingRecordButton from "../components/home/FloatingRecordButton";
+import NavBar from "../components/navbar";
 
-export default function Notes(){
-    return(
-    <View style={{flex:1}}>
-        <ScrollView 
-        style={styles.container}
-        showsVerticalScrollIndicator={true}
-        >
-            <Text style={styles.title}>
-                Notes
-            </Text>
-        </ScrollView>
-        <FloatingRecordButton />
-        <NavBar />
-    </View>
-    )
+import NotesStats from "../components/notes/NotesStats";
+import ModulesSection from "../components/notes/ModulesSection";
+
+import styles from "../styles/notesStyles";
+
+export default function Notes() {
+
+    return (
+
+        <View style={styles.main}>
+
+            <HomeHeader userName="Vitumbiko" />
+
+            <ScrollView
+                style={styles.container}
+                showsVerticalScrollIndicator={false}
+            >
+
+                <SearchBar />
+
+                <NotesStats />
+
+                <ModulesSection />
+
+            </ScrollView>
+
+            <FloatingRecordButton />
+
+            <NavBar />
+
+        </View>
+
+    );
+
 }
-
-const styles = StyleSheet.create({
-    container:{
-        flex:1,
-        backgroundColor:"#F5F7FB",
-        paddingHorizontal:20,
-        paddingTop:60,
-    },
-    title:{
-        fontSize: 24,
-        fontWeight: "bold",
-        textAlign: "center",
-    }
-});

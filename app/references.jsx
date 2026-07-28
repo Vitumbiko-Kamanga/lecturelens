@@ -3,14 +3,16 @@ import React from "react";
 
 import NavBar from "../components/navbar.jsx";
 import FloatingRecordButton from "../components/home/FloatingRecordButton";
+import HomeHeader from "../components/home/HomeHeader";
 
 export default function References(){
     return(
 
     <View style={{flex:1}}>
+        <HomeHeader userName="Yashar" />
         <ScrollView style={styles.container}>
             <Text style={styles.title}>
-                References
+                References coming soon!
             </Text>
         </ScrollView>
         <FloatingRecordButton />

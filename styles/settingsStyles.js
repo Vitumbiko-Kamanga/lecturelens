@@ -1,49 +1,58 @@
 import { StyleSheet } from "react-native";
 
 const styles = StyleSheet.create({
+  main:{
+    flex:1,
+    backgroundColor: "#2563EB"
+  },
 
   container: {
     flex: 1,
     backgroundColor: "#F5F7FB",
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 10,
   },
 
   header: {
-    marginBottom: 25,
+    marginTop: 50,
+    paddingHorizontal: 22,
+    marginBottom: 20,
+    flexDirection:"row",
+    gap:30,
+    
   },
 
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "bold",
-    color: "#111",
+    color: "#FFF",
   },
 
-  subtitle: {
-    marginTop: 5,
-    fontSize: 14,
-    color: "#666",
-  },
+  // subtitle: {
+  //   marginTop: 5,
+  //   fontSize: 14,
+  //   color: "#666",
+  // },
 
-  profileCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 30,
-    elevation: 2,
-  },
+  // profileCard: {
+  //   backgroundColor: "#FFFFFF",
+  //   borderRadius: 20,
+  //   padding: 20,
+  //   flexDirection: "row",
+  //   alignItems: "center",
+  //   marginBottom: 30,
+  //   elevation: 2,
+  // },
 
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 35,
-    backgroundColor: "#EAF2FF",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
-  },
+  // avatar: {
+  //   width: 50,
+  //   height: 50,
+  //   borderRadius: 35,
+  //   backgroundColor: "#EAF2FF",
+  //   justifyContent: "center",
+  //   alignItems: "center",
+  //   marginRight: 10,
+  // },
 
   name: {
     fontSize: 16,
@@ -108,7 +117,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderWidth: 1,
     borderColor: "#FFD9D9",
-    marginBottom:200,
+    marginBottom:100,
   },
 
   logoutText: {

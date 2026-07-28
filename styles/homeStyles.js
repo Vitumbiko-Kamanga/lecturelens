@@ -2,15 +2,25 @@ import { StyleSheet } from "react-native";
 
 const styles = StyleSheet.create({
 
+    main:{
+        flex:1,
+        backgroundColor:"#ff8a00",
+    },
     container:{
         flex:1,
         backgroundColor:"#F5F7FB",
         paddingHorizontal:20,
-        paddingTop:60,
+        paddingTop:10,
     },
 
     header:{
+        marginTop:50,
+        paddingHorizontal:20,
         marginBottom:20,
+        flexDirection:"row",
+        columnGap: "33%",
+        alignItems:"center",
+
     },
 
     greeting:{
@@ -19,10 +29,23 @@ const styles = StyleSheet.create({
         fontWeight:"500",
     },
 
+    usernameContainer:{
+        backgroundColor:"#0e7e0a",
+        width: 40,
+        height: 40,
+        borderRadius: 50,
+        alignItems:"center",
+       
+        
+        
+    },
+
     userName:{
-        fontSize:20,
+        fontSize:18,
         fontWeight:"bold",
-        color:"#111827",
+        color:"#FFF",
+        paddingVertical: 5
+        
     },
 
     tagline:{
@@ -36,7 +59,7 @@ const styles = StyleSheet.create({
         alignItems:"center",
         backgroundColor:"#FFFFFF",
         paddingHorizontal:16,
-        paddingVertical:12,
+        paddingVertical:10,
         borderRadius:16,
         marginBottom:30,
         elevation:2,
@@ -52,7 +75,7 @@ const styles = StyleSheet.create({
     sectionTitle:{
         fontSize:16,
         fontWeight:"700",
-        color:"#111827",
+        color:"#FF8A00",
         marginBottom:16,
     },
     actionsGrid:{
@@ -147,7 +170,7 @@ const styles = StyleSheet.create({
         width:65,
         height:65,
         borderRadius:35,
-        backgroundColor:"#EF4444",
+        backgroundColor:"#FF8A00",
         justifyContent:"center",
         alignItems:"center",
         elevation:8,

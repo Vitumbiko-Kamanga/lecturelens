@@ -18,7 +18,7 @@ export default function SearchBar() {
 
             <TextInput
                 style={styles.searchInput}
-                placeholder="Search lectures, notes..."
+                placeholder="Search module, notes..."
                 placeholderTextColor="#9CA3AF"
             />
 

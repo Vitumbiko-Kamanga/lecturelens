@@ -18,16 +18,14 @@ export default function Settings() {
     const [offline, setOffline] = useState(false);
 
     return (
-        <View style={{flex:1}}>
-
+        <View style={styles.main}>
+            <SettingsHeader />
             <ScrollView style={styles.container}>
 
-                <SettingsHeader />
-
-                <ProfileCard
+                {/* <ProfileCard
                     name="Vitumbiko Kamanga"
                     email="bit22-vkamanga@mubas.ac.mw"
-                />
+                /> */}
 
                 <SectionTitle title="ACCOUNT" />
                 <SettingItem

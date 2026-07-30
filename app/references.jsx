@@ -1,36 +1,46 @@
-import {ScrollView, Text, View, StyleSheet} from "react-native";
 import React from "react";
+import { ScrollView, View } from "react-native";
 
-import NavBar from "../components/navbar.jsx";
-import FloatingRecordButton from "../components/home/FloatingRecordButton";
 import HomeHeader from "../components/home/HomeHeader";
+import NavBar from "../components/navbar";
+import FloatingRecordButton from "../components/home/FloatingRecordButton";
 
-export default function References(){
-    return(
+import SearchReference from "../components/references/SearchReference";
+import FeaturedResource from "../components/references/FeaturedResource";
+import ModuleList from "../components/references/ModuleList";
+import ReferenceCategoryList from "../components/references/ReferenceCategoryList";
 
-    <View style={{flex:1}}>
-        <HomeHeader userName="Yashar" />
-        <ScrollView style={styles.container}>
-            <Text style={styles.title}>
-                References coming soon!
-            </Text>
-        </ScrollView>
-        <FloatingRecordButton />
-        <NavBar />
-    </View>
-    )
+import styles from "../styles/referencesStyles";
+
+export default function Reference() {
+
+    return (
+
+        <View style={styles.main}>
+
+            <HomeHeader userName="Yashar" />
+
+            <ScrollView
+                style={styles.container}
+                showsVerticalScrollIndicator={false}
+            >
+
+                <SearchReference />
+
+                <FeaturedResource />
+
+                <ModuleList />
+
+                <ReferenceCategoryList />
+
+            </ScrollView>
+
+            <FloatingRecordButton />
+
+            <NavBar />
+
+        </View>
+
+    );
+
 }
-
-const styles = StyleSheet.create({
-    container:{
-        flex:1,
-        backgroundColor:"#ffffff",
-        paddingHorizontal:20,
-        paddingTop:60,        
-    },
-    title:{
-        fontSize: 24,
-        fontWeight: "bold",
-        textAlign: "center",
-    }
-});

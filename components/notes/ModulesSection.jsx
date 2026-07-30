@@ -9,7 +9,11 @@ export default function ModulesSection(){
 
     return(
 
-        <View>
+        <View style={
+            {
+                marginBottom: 170,
+            }
+        }>
 
             <Text style={styles.sectionTitle}>
                 My Modules

@@ -23,14 +23,14 @@ export default function ModuleCard({
                 <View
                     style={[
                         styles.folderIcon,
-                        { backgroundColor: color }
+                        // { backgroundColor: color }
                     ]}
                 >
 
                     <Ionicons
                         name="folder"
-                        size={24}
-                        color="#FFF"
+                        size={44}
+                        color="#7e7b79"
                     />
 
                 </View>

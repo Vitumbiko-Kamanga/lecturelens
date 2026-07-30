@@ -4,7 +4,7 @@ export default StyleSheet.create({
 
     main:{
         flex:1,
-        backgroundColor:"#FFFFFF"
+        backgroundColor:"#ff8a00",
     },
 
     container:{
@@ -15,17 +15,16 @@ export default StyleSheet.create({
     },
 
     sectionTitle:{
-        fontSize:20,
+        fontSize:16,
         fontWeight:"700",
-        color:"#1F2937",
-        marginTop:20,
+        color:"#FF8A00",
         marginBottom:15
     },
 
     statsContainer:{
         flexDirection:"row",
         justifyContent:"space-between",
-        marginBottom:25
+        marginBottom:20
     },
 
     statCard:{
@@ -38,7 +37,7 @@ export default StyleSheet.create({
     },
 
     statNumber:{
-        fontSize:24,
+        fontSize:16,
         fontWeight:"700",
         color:"#2563EB"
     },
@@ -52,7 +51,7 @@ export default StyleSheet.create({
         backgroundColor:"#FFFFFF",
         borderRadius:20,
         padding:18,
-        marginBottom:15,
+        marginBottom:18,
         flexDirection:"row",
         justifyContent:"space-between",
         alignItems:"center",
@@ -66,8 +65,8 @@ export default StyleSheet.create({
     },
 
     folderIcon:{
-        width:55,
-        height:55,
+        width:50,
+        height:50,
         borderRadius:15,
         justifyContent:"center",
         alignItems:"center",

@@ -21,7 +21,7 @@ export default function FeaturedResource(){
                 </Text>
 
                 <Text style={styles.featureSubtitle}>
-                    Book • Recommended for you
+                    Book Recommended for you
                 </Text>
 
             </View>

@@ -11,8 +11,8 @@ export default function SettingsHeader() {
         <View style={styles.header}>
             <Ionicons 
                 name="arrow-back-outline"
-                size={30}
-                color="#777"
+                size={22}
+                color="#FFF"
                 weight=""
 
             />

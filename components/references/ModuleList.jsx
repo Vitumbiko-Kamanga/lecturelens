@@ -7,6 +7,14 @@ import styles from "../../styles/referencesStyles";
 
 export default function ModuleList(){
 
+    const modules =[
+        {id:'1', module: 'Database Systems'},
+        {id:'2', module: 'Operating Sytems'},
+        {id:'3', module: 'Telecommunications'},
+        {id:'4', module: 'Articial Inteligence'},
+        {id:'5', module: 'Server Administration'},
+        {id:'6', module: 'Digital Electronics'}
+    ];
     return(
 
         <View>
@@ -15,17 +23,9 @@ export default function ModuleList(){
                 Browse by Module
             </Text>
 
-            <ModuleFolder title="Database Systems"/>
-
-            <ModuleFolder title="Operating Systems"/>
-
-            <ModuleFolder title="Telecommunications"/>
-
-            <ModuleFolder title="Web Technologies"/>
-
-            <ModuleFolder title="Computer Hardware"/>
-
-            <ModuleFolder title="Research Methods"/>
+            {modules.map((title) =>(
+                 <ModuleFolder key={title.id} title={title.module} />
+            ))}
 
         </View>
 

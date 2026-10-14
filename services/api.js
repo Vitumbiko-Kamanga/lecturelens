@@ -1,5 +1,5 @@
 
-const API_BASE_URL = "http://10.1.24.190:5000";
+const API_BASE_URL = "http://10.1.24.62:5000";
 
 // DEMO ONLY: replace this with the verified Clerk user ID
 // after Clerk authentication has been implemented.

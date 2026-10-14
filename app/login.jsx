@@ -22,57 +22,72 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
-  async function handleLogin() {
-    setError("");
+  
+async function handleLogin() {
+  setError("");
 
-    const cleanEmail = email.trim();
+  const cleanEmail = email.trim();
 
-    if (!cleanEmail || !password) {
-        setError("Please enter your email and password.");
-        return;
+  if (!cleanEmail || !password) {
+    setError("Please enter your email and password.");
+    return;
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    setError("Please enter a valid email address.");
+    return;
+  }
+
+  if (fetchStatus === "fetching") {
+    return;
+  }
+
+  setIsLoading(true);
+
+  try {
+    // Step 1: Start sign-in with the student's email.
+    const { error: createError } = await signIn.create({
+      identifier: cleanEmail,
+    });
+
+    if (createError) {
+      setError(createError.message || "Unable to start sign-in.");
+      return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
-        setError("Please enter a valid email address.");
-        return;
+    // Step 2: Verify the password.
+    const { error: passwordError } = await signIn.password({
+      password,
+    });
+
+    if (passwordError) {
+      setError(passwordError.message || "Unable to sign in.");
+      return;
     }
 
-    if (fetchStatus === "fetching") {
-        return;
+    // Step 3: Activate the session after successful authentication.
+    if (signIn.status === "complete") {
+      const { error: finalizeError } = await signIn.finalize({
+        navigate: () => router.replace("/home"),
+      });
+
+      if (finalizeError) {
+        setError(finalizeError.message || "Could not complete sign-in.");
+      }
+    } else {
+      setError(
+        "Additional verification is required. Please contact support while we configure this step."
+      );
     }
+  } catch (error) {
+    setError(
+      error?.message || "Something went wrong. Please try again."
+    );
+  } finally {
+    setIsLoading(false);
+  }
+}
 
-    setIsLoading(true);
-
-    try {
-        const { error: signInError } = await signIn.password({
-        emailAddress: cleanEmail,
-        password,
-        });
-
-        if (signInError) {
-        setError(
-            signInError.message || "Unable to sign in. Please try again."
-        );
-        return;
-        }
-
-        if (signIn.status === "complete") {
-        await signIn.finalize({
-            navigate: () => router.replace("/home"),
-        });
-        } else {
-        setError(
-            "Additional verification is required. We need to configure that step before completing sign-in."
-        );
-        }
-    } catch (error) {
-        setError(
-        error?.message || "Something went wrong. Please try again."
-        );
-    } finally {
-        setIsLoading(false);
-    }
-    }
 
   return (
     <SafeAreaView style={styles.screen}>

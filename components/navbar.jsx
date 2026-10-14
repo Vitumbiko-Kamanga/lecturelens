@@ -7,7 +7,7 @@ export default function NavBar(){
 
     return( 
         <View style={styles.dash}>
-            <NavLink name="home-outline" title="Home" href="/" />
+            <NavLink name="home-outline" title="Home" href="/home" />
             <NavLink name="book-outline" title="Notes" href="/notes" />
             <NavLink name="reader-outline" title="References" href="/references" />
             <NavLink name="settings-outline" title="Settings" href="/settings" />

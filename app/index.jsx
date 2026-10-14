@@ -1,5 +1,8 @@
 import React from "react";
 import { ScrollView, View } from "react-native";
+import { useEffect, useState } from "react";
+import { api } from "../services/api";
+
 
 import NavBar from "../components/navbar";
 import HomeHeader from "../components/home/HomeHeader";

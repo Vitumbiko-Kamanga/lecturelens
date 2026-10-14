@@ -16,7 +16,3 @@
     "pg": "^8.23.0"
   }
 }
-  
-name = "Personal Computer"
-price = 420000
-for price in range(320000,450000):

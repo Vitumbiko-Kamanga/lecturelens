@@ -167,11 +167,17 @@ export default function LoginScreen() {
             ) : null}
 
             <Pressable
-              style={styles.primaryButton}
-              onPress={handleLogin}
-              accessibilityRole="button"
+                style={[
+                    styles.primaryButton,
+                    isLoading && { opacity: 0.6 },
+                ]}
+                onPress={handleLogin}
+                disabled={isLoading || fetchStatus === "fetching"}
+                accessibilityRole="button"
             >
-              <Text style={styles.primaryButtonText}>Sign In</Text>
+                <Text style={styles.primaryButtonText}>
+                    {isLoading ? "Signing In..." : "Sign In"}
+                </Text>
             </Pressable>
 
             <Text style={styles.demoNotice}>

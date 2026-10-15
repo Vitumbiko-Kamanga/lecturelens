@@ -123,8 +123,6 @@ async function handleLogin() {
           </Text>
 
           <View style={styles.form}>
-            <Text style={styles.label}>Email address</Text>
-
             <TextInput
               style={styles.input}
               placeholder="Enter your university email"
@@ -141,8 +139,7 @@ async function handleLogin() {
             />
 
             <View style={styles.passwordHeading}>
-              <Text style={styles.label}>Password</Text>
-
+              
               <Pressable
                 onPress={() => setShowPassword(!showPassword)}
                 accessibilityRole="button"

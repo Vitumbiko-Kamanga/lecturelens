@@ -136,7 +136,6 @@ export default function RegisterScreen() {
             </Text>
 
             <View style={styles.form}>
-              <Text style={styles.label}>Full name</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Enter your full name"
@@ -149,10 +148,9 @@ export default function RegisterScreen() {
                 accessibilityLabel="Full name"
               />
 
-              <Text style={styles.label}>Email address</Text>
               <TextInput
                 style={styles.input}
-                placeholder="student@example.com"
+                placeholder="Email"
                 placeholderTextColor="#8A94A6"
                 value={email}
                 onChangeText={setEmail}
@@ -163,10 +161,9 @@ export default function RegisterScreen() {
                 accessibilityLabel="Email address"
               />
 
-              <Text style={styles.label}>Password</Text>
               <TextInput
                 style={styles.input}
-                placeholder="At least 8 characters"
+                placeholder="Password"
                 placeholderTextColor="#8A94A6"
                 value={password}
                 onChangeText={setPassword}
@@ -176,10 +173,9 @@ export default function RegisterScreen() {
                 accessibilityLabel="Password"
               />
 
-              <Text style={styles.label}>Confirm password</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Re-enter your password"
+                placeholder="Confirm Password"
                 placeholderTextColor="#8A94A6"
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}

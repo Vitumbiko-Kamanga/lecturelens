@@ -21,102 +21,120 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [code, setCode] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
-  async function handleRegister() {
-    setError("");
-    setMessage("");
+  
+async function handleRegister() {
+  setError("");
+  setMessage("");
 
-    const cleanName = name.trim();
-    const cleanEmail = email.trim();
+  const cleanName = name.trim();
+  const cleanEmail = email.trim();
 
-    if (!cleanName || !cleanEmail || !password || !confirmPassword) {
-      setError("Please complete all fields.");
+  if (!cleanName || !cleanEmail || !password || !confirmPassword) {
+    setError("Please complete all fields.");
+    return;
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    setError("Please enter a valid email address.");
+    return;
+  }
+
+  if (password.length < 8) {
+    setError("Your password must contain at least 8 characters.");
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    setError("Your passwords do not match.");
+    return;
+  }
+
+  if (fetchStatus === "fetching") return;
+
+  setIsLoading(true);
+
+  try {
+    const { error: signUpError } = await signUp.password({
+      emailAddress: cleanEmail,
+      password,
+      firstName: cleanName,
+    });
+
+    if (signUpError) {
+      setError(signUpError.message || "Unable to start registration.");
       return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
-      setError("Please enter a valid email address.");
+    const { error: sendError } =
+      await signUp.verifications.sendEmailCode();
+
+    if (sendError) {
+      setError(sendError.message || "Could not send the verification code.");
       return;
     }
 
-    if (password.length < 8) {
-      setError("Your password must contain at least 8 characters.");
-      return;
-    }
+    setIsVerifying(true);
+    setMessage(`A verification code has been sent to ${cleanEmail}.`);
+  } catch (err) {
+    setError(err?.message || "Something went wrong. Please try again.");
+  } finally {
+    setIsLoading(false);
+  }
+}
+// handling the verification process
 
-    if (password !== confirmPassword) {
-      setError("Your passwords do not match.");
-      return;
-    }
+async function handleVerify() {
+  setError("");
+  setMessage("");
 
-    if (fetchStatus === "fetching") {
-      return;
-    }
+  if (!code.trim()) {
+    setError("Please enter the verification code from your email.");
+    return;
+  }
 
-    setIsLoading(true);
+  setIsLoading(true);
 
-    try {
-      const { error: createError } = await signUp.create({
-        emailAddress: cleanEmail,
-        password,
-        firstName: cleanName,
+  try {
+    const { error: verifyError } =
+      await signUp.verifications.verifyEmailCode({
+        code: code.trim(),
       });
 
-      if (createError) {
-        setError(
-          createError.message || "Unable to create your account."
-        );
-        return;
-      }
-
-      if (signUp.status === "complete") {
-        const { error: finalizeError } = await signUp.finalize({
-          navigate: () => router.replace("/home"),
-        });
-
-        if (finalizeError) {
-          setError(
-            finalizeError.message || "Could not complete registration."
-          );
-        }
-
-        return;
-      }
-
-      const emailCodeEnabled =
-        signUp.unverifiedFields?.includes("emailAddress");
-
-      if (emailCodeEnabled) {
-        const { error: verificationError } =
-          await signUp.verifications.sendEmailCode();
-
-        if (verificationError) {
-          setError(
-            verificationError.message ||
-              "Your account was started, but we could not send the verification code."
-          );
-          return;
-        }
-
-        setMessage(
-          "A verification code has been sent to your email. Email verification is the next step to complete."
-        );
-      } else {
-        setMessage(
-          "Your registration has started, but an additional verification step is required."
-        );
-      }
-    } catch (err) {
-      setError(
-        err?.message || "Something went wrong. Please try again."
-      );
-    } finally {
-      setIsLoading(false);
+    if (verifyError) {
+      setError(verifyError.message || "Invalid verification code.");
+      return;
     }
+
+    if (signUp.status === "complete") {
+      const { error: finalizeError } = await signUp.finalize();
+
+      if (finalizeError) {
+        setError(
+          finalizeError.message || "Could not complete registration."
+        );
+        return;
+      }
+
+      router.replace("/home");
+    } else {
+      setMessage(
+        "Email verified. Another account setup step may still be required."
+      );
+    }
+  } catch (err) {
+    setError(err?.message || "Verification failed. Please try again.");
+  } finally {
+    setIsLoading(false);
   }
+}
+
+
 
   return (
     <SafeAreaView style={styles.safeArea}>

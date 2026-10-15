@@ -154,95 +154,158 @@ async function handleVerify() {
             </Text>
 
             <View style={styles.form}>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your full name"
-                placeholderTextColor="#8A94A6"
-                value={name}
-                onChangeText={setName}
-                autoCapitalize="words"
-                autoCorrect={false}
-                editable={!isLoading}
-                accessibilityLabel="Full name"
-              />
+              
+                {isVerifying ? (
+                <>
+                    <Text style={styles.label}>Email verification code</Text>
 
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                placeholderTextColor="#8A94A6"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!isLoading}
-                accessibilityLabel="Email address"
-              />
+                    <Text style={styles.subtitle}>
+                    Enter the verification code sent to your email address.
+                    </Text>
 
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor="#8A94A6"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                editable={!isLoading}
-                accessibilityLabel="Password"
-              />
+                    <TextInput
+                    style={styles.input}
+                    placeholder="Enter verification code"
+                    placeholderTextColor="#8A94A6"
+                    value={code}
+                    onChangeText={setCode}
+                    keyboardType="number-pad"
+                    autoCapitalize="none"
+                    editable={!isLoading}
+                    accessibilityLabel="Email verification code"
+                    />
 
-              <TextInput
-                style={styles.input}
-                placeholder="Confirm Password"
-                placeholderTextColor="#8A94A6"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                editable={!isLoading}
-                accessibilityLabel="Confirm password"
-              />
+                    {!!error && (
+                    <Text style={styles.errorText}>{error}</Text>
+                    )}
 
-              <Pressable
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.showPassword}
-                accessibilityRole="button"
-              >
-                <Text style={styles.showPasswordText}>
-                  {showPassword ? "Hide passwords" : "Show passwords"}
-                </Text>
-              </Pressable>
+                    {!!message && (
+                    <Text style={styles.messageText}>{message}</Text>
+                    )}
 
-              {!!error && (
-                <Text style={styles.errorText}>{error}</Text>
-              )}
+                    <Pressable
+                    style={[
+                        styles.primaryButton,
+                        isLoading && styles.disabledButton,
+                    ]}
+                    onPress={handleVerify}
+                    disabled={isLoading}
+                    accessibilityRole="button"
+                    >
+                    <Text style={styles.primaryButtonText}>
+                        {isLoading ? "Verifying..." : "Verify Email"}
+                    </Text>
+                    </Pressable>
 
-              {!!message && (
-                <Text style={styles.messageText}>{message}</Text>
-              )}
+                    <Pressable
+                    style={styles.secondaryButton}
+                    onPress={() => {
+                        setIsVerifying(false);
+                        setCode("");
+                        setError("");
+                        setMessage("");
+                    }}
+                    disabled={isLoading}
+                    >
+                    <Text style={styles.secondaryButtonText}>
+                        Back to registration
+                    </Text>
+                    </Pressable>
+                </>
+                ) : (
+                <>
+                    <TextInput
+                    style={styles.input}
+                    placeholder="Full Name"
+                    placeholderTextColor="#8A94A6"
+                    value={name}
+                    onChangeText={setName}
+                    autoCapitalize="words"
+                    autoCorrect={false}
+                    editable={!isLoading}
+                    accessibilityLabel="Full name"
+                    />
 
-              <Pressable
-                style={[
-                  styles.primaryButton,
-                  isLoading && styles.disabledButton,
-                ]}
-                onPress={handleRegister}
-                disabled={isLoading || fetchStatus === "fetching"}
-                accessibilityRole="button"
-              >
-                <Text style={styles.primaryButtonText}>
-                  {isLoading ? "Creating Account..." : "Create Account"}
-                </Text>
-              </Pressable>
+                    <TextInput
+                    style={styles.input}
+                    placeholder="Email"
+                    placeholderTextColor="#8A94A6"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isLoading}
+                    accessibilityLabel="Email address"
+                    />
 
-              <View style={styles.footer}>
+                    <TextInput
+                    style={styles.input}
+                    placeholder="Password"
+                    placeholderTextColor="#8A94A6"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    editable={!isLoading}
+                    accessibilityLabel="Password"
+                    />
+
+                    <TextInput
+                    style={styles.input}
+                    placeholder="Confirm password"
+                    placeholderTextColor="#8A94A6"
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    editable={!isLoading}
+                    accessibilityLabel="Confirm password"
+                    />
+
+                    <Pressable
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.showPassword}
+                    accessibilityRole="button"
+                    >
+                    <Text style={styles.showPasswordText}>
+                        {showPassword ? "Hide passwords" : "Show passwords"}
+                    </Text>
+                    </Pressable>
+
+                    {!!error && (
+                    <Text style={styles.errorText}>{error}</Text>
+                    )}
+
+                    {!!message && (
+                    <Text style={styles.messageText}>{message}</Text>
+                    )}
+
+                    <Pressable
+                    style={[
+                        styles.primaryButton,
+                        isLoading && styles.disabledButton,
+                    ]}
+                    onPress={handleRegister}
+                    disabled={isLoading || fetchStatus === "fetching"}
+                    accessibilityRole="button"
+                    >
+                    <Text style={styles.primaryButtonText}>
+                        {isLoading ? "Creating Account..." : "Create Account"}
+                    </Text>
+                    </Pressable>
+                </>
+                )}
+
+                <View style={styles.footer}>
                 <Text style={styles.footerText}>
-                  Already have an account?{" "}
+                    Already have an account?{" "}
                 </Text>
                 <Link href="/login" style={styles.link}>
-                  Sign in
+                    Sign in
                 </Link>
-              </View>
+                </View>
+
             </View>
           </View>
         </ScrollView>
@@ -342,6 +405,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 4,
   },
+  
+  secondaryButton: {
+    minHeight: 46,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+  },
+  secondaryButtonText: {
+    color: "#2457C5",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
   disabledButton: {
     opacity: 0.6,
   },

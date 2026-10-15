@@ -1,5 +1,5 @@
 
-import { ClerkProvider } from '@clerk/expo';
+import { ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import { Stack } from 'expo-router';
 
@@ -11,13 +11,42 @@ if (!publishableKey) {
   );
 }
 
+function RootNavigator() {
+  const { isLoaded, isSignedIn } = useAuth();
+
+  // Wait for Clerk to restore the user's session.
+  if (!isLoaded) {
+    return null;
+  }
+
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      {/* Screens available only to signed-in students */}
+      <Stack.Protected guard={isSignedIn === true}>
+        <Stack.Screen name="home" />
+        <Stack.Screen name="notes" />
+        <Stack.Screen name="references" />
+        <Stack.Screen name="settings" />
+        <Stack.Screen name="api-test" />
+      </Stack.Protected>
+
+      {/* Screens available only to signed-out users */}
+      <Stack.Protected guard={isSignedIn === false}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="register" />
+      </Stack.Protected>
+    </Stack>
+  );
+}
+
 export default function Layout() {
   return (
     <ClerkProvider
       publishableKey={publishableKey}
       tokenCache={tokenCache}
     >
-      <Stack screenOptions={{ headerShown: false }} />
+      <RootNavigator />
     </ClerkProvider>
   );
 }

@@ -1,6 +1,7 @@
 import React from "react";
 import {useState} from "react";
-import { ScrollView, View } from "react-native";
+import { ScrollView, View, Alert } from "react-native";
+import { useClerk } from "@clerk/expo";
 
 import styles from "../styles/settingsStyles";
  
@@ -13,9 +14,36 @@ import LogoutButton from "../components/settings/LogoutButton";
 import SettingSwitch from "../components/settings/SettingSwitch";
 
 export default function Settings() {
-
+    const { signOut } = useClerk();
     const [notifications, setNotifications] = useState(true);
     const [offline, setOffline] = useState(false);
+    async function handleLogout() {
+        Alert.alert(
+            "Log Out",
+            "Are you sure you want to log out of LectureLens?",
+            [
+                {
+                    text: "Cancel",
+                    style: "cancel",
+                },
+                {
+                    text: "Log Out",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            await signOut();
+                        } catch (error) {
+                            Alert.alert(
+                                "Logout Failed",
+                                error?.message ||
+                                    "Unable to log out. Please try again."
+                            );
+                        }
+                    },
+                },
+            ]
+        );
+    }
 
     return (
         <View style={styles.main}>
@@ -92,9 +120,7 @@ export default function Settings() {
                     subtitle="Version 1.0.0"
                     onPress={() => console.log("Backup")}
                 />
-                <LogoutButton 
-                onPress={() => console.log("Logout")}
-                />
+                <LogoutButton onPress={handleLogout} />
             </ScrollView>
             
             <NavBar />

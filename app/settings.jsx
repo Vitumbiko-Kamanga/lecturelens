@@ -2,6 +2,7 @@ import React from "react";
 import {useState} from "react";
 import { ScrollView, View, Alert } from "react-native";
 import { useClerk } from "@clerk/expo";
+import { useRouter } from "expo-router";
 
 import styles from "../styles/settingsStyles";
  
@@ -15,6 +16,7 @@ import SettingSwitch from "../components/settings/SettingSwitch";
 
 export default function Settings() {
     const { signOut } = useClerk();
+    const router = useRouter();
     const [notifications, setNotifications] = useState(true);
     const [offline, setOffline] = useState(false);
     async function handleLogout() {
@@ -57,7 +59,7 @@ export default function Settings() {
                     icon="person-outline"
                     title="Profile Information"
                     subtitle="View and edit your profile"
-                    onPress={() => console.log("Profile")}
+                    onPress={() => router.push("/profile")}
                 />
                 <SettingItem
                     icon="shield-checkmark-outline"

@@ -14,7 +14,6 @@ if (!publishableKey) {
 function RootNavigator() {
   const { isLoaded, isSignedIn } = useAuth();
 
-  // Wait for Clerk to restore the user's session.
   if (!isLoaded) {
     return null;
   }
@@ -27,6 +26,7 @@ function RootNavigator() {
         <Stack.Screen name="notes" />
         <Stack.Screen name="references" />
         <Stack.Screen name="settings" />
+        <Stack.Screen name="profile" />
         <Stack.Screen name="api-test" />
       </Stack.Protected>
 

@@ -27,6 +27,7 @@ function RootNavigator() {
         <Stack.Screen name="references" />
         <Stack.Screen name="settings" />
         <Stack.Screen name="profile" />
+        <Stack.Screen name="security" />
         <Stack.Screen name="api-test" />
       </Stack.Protected>
 

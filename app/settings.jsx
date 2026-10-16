@@ -65,7 +65,7 @@ export default function Settings() {
                     icon="shield-checkmark-outline"
                     title="Account & Security"
                     subtitle="Password and security settings"
-                    onPress={() => console.log("Security")}
+                    onPress={() => router.push("/security")}
                 />
                 <SettingItem
                     icon="cloud-outline"

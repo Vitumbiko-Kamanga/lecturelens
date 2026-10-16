@@ -67,9 +67,7 @@ async function handleLogin() {
 
     // Step 3: Activate the session after successful authentication.
     if (signIn.status === "complete") {
-      const { error: finalizeError } = await signIn.finalize({
-        navigate: () => router.replace("/home"),
-      });
+      const { error: finalizeError } = await signIn.finalize();
 
       if (finalizeError) {
         setError(finalizeError.message || "Could not complete sign-in.");

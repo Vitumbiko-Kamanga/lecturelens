@@ -50,10 +50,7 @@ export default function Settings() {
             <SettingsHeader />
             <ScrollView style={styles.container}>
 
-                {/* <ProfileCard
-                    name="Vitumbiko Kamanga"
-                    email="bit22-vkamanga@mubas.ac.mw"
-                /> */}
+                <ProfileCard />
 
                 <SectionTitle title="ACCOUNT" />
                 <SettingItem

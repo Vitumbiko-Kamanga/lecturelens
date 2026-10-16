@@ -28,31 +28,26 @@ const styles = StyleSheet.create({
     color: "#FFF",
   },
 
-  // subtitle: {
-  //   marginTop: 5,
-  //   fontSize: 14,
-  //   color: "#666",
-  // },
+  profileCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 25,
+    elevation: 2,
+  },
 
-  // profileCard: {
-  //   backgroundColor: "#FFFFFF",
-  //   borderRadius: 20,
-  //   padding: 20,
-  //   flexDirection: "row",
-  //   alignItems: "center",
-  //   marginBottom: 30,
-  //   elevation: 2,
-  // },
+  avatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "#EAF2FF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
 
-  // avatar: {
-  //   width: 50,
-  //   height: 50,
-  //   borderRadius: 35,
-  //   backgroundColor: "#EAF2FF",
-  //   justifyContent: "center",
-  //   alignItems: "center",
-  //   marginRight: 10,
-  // },
 
   name: {
     fontSize: 16,

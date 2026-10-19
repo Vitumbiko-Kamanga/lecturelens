@@ -1,18 +1,12 @@
 
 const express = require("express");
 const pool = require("../config/database");
-
+const requireAuth = require("../middleware/requireAuth");
 const router = express.Router();
 
-// DEMO ONLY: replace with verified Clerk authentication.
-function getUserId(req) {
-  return req.get("x-user-id");
-}
-
-// List resources for a module owned by the current demo user.
+router.use(requireAuth);
 router.get("/module/:moduleId", async (req, res) => {
-  const userId = getUserId(req);
-
+  const userId = req.auth.userId;
   if (!userId) {
     return res.status(401).json({ message: "User ID is required" });
   }
@@ -35,9 +29,9 @@ router.get("/module/:moduleId", async (req, res) => {
   }
 });
 
-// Save a resource against a module owned by the current demo user.
+// Save a resource against a module owned by the user.
 router.post("/module/:moduleId", async (req, res) => {
-  const userId = getUserId(req);
+  const userId = req.auth.userId;
   const {
     title,
     author = "",
@@ -100,7 +94,7 @@ router.post("/module/:moduleId", async (req, res) => {
 
 // Delete a resource, checking that it belongs to the user's module.
 router.delete("/:resourceId", async (req, res) => {
-  const userId = getUserId(req);
+  const userId = req.auth.userId;
 
   if (!userId) {
     return res.status(401).json({ message: "User ID is required" });

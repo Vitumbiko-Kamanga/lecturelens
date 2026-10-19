@@ -3,14 +3,12 @@ const express = require("express");
 const pool = require("../config/database");
 
 const router = express.Router();
+const requireAuth = require("../middleware/requireAuth");
+router.use(requireAuth);
 
-// DEMO ONLY: replace with verified Clerk authentication.
-function getUserId(req) {
-  return req.get("x-user-id");
-}
 
 router.get("/", async (req, res) => {
-  const userId = getUserId(req);
+  const userId = req.auth.userId;
 
   if (!userId) {
     return res.status(401).json({ message: "User ID is required" });
@@ -33,7 +31,7 @@ router.get("/", async (req, res) => {
 });
 
 router.post("/", async (req, res) => {
-  const userId = getUserId(req);
+  const userId = req.auth.userId;
   const { name, code = "", description = "" } = req.body;
 
   if (!userId) {
@@ -60,7 +58,7 @@ router.post("/", async (req, res) => {
 });
 
 router.put("/:id", async (req, res) => {
-  const userId = getUserId(req);
+  const userId = req.auth.userId;
   const { name, code = "", description = "" } = req.body;
 
   if (!userId) {
@@ -92,7 +90,7 @@ router.put("/:id", async (req, res) => {
 });
 
 router.delete("/:id", async (req, res) => {
-  const userId = getUserId(req);
+  const userId = req.auth.userId;
 
   if (!userId) {
     return res.status(401).json({ message: "User ID is required" });

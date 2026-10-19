@@ -1,17 +1,15 @@
 
 const express = require("express");
 const pool = require("../config/database");
+const requireAuth = require("../middleware/requireAuth");
 
 const router = express.Router();
 
-// DEMO ONLY: replace with verified Clerk authentication.
-function getUserId(req) {
-  return req.get("x-user-id");
-}
+router.use(requireAuth);
 
-// List lectures belonging to a module owned by the current demo user.
+// List lectures belonging to a module owned by the user.
 router.get("/module/:moduleId", async (req, res) => {
-  const userId = getUserId(req);
+  const userId = req.auth.userId;
 
   if (!userId) {
     return res.status(401).json({ message: "User ID is required" });
@@ -35,9 +33,9 @@ router.get("/module/:moduleId", async (req, res) => {
   }
 });
 
-// Create a lecture inside a module owned by the current demo user.
+// Create a lecture inside a module owned by the user.
 router.post("/module/:moduleId", async (req, res) => {
-  const userId = getUserId(req);
+  const userId = req.auth.userId;
   const { title, topic = "", lecture_date } = req.body;
 
   if (!userId) {
@@ -77,9 +75,9 @@ router.post("/module/:moduleId", async (req, res) => {
   }
 });
 
-// Get one lecture, only if its module belongs to the current demo user.
+
 router.get("/:lectureId", async (req, res) => {
-  const userId = getUserId(req);
+  const userId = req.auth.userId;
 
   if (!userId) {
     return res.status(401).json({ message: "User ID is required" });
@@ -106,9 +104,9 @@ router.get("/:lectureId", async (req, res) => {
   }
 });
 
-// Delete a lecture owned by the current demo user.
+// Delete a lecture owned by the user.
 router.delete("/:lectureId", async (req, res) => {
-  const userId = getUserId(req);
+  const userId = req.auth.userId;
 
   if (!userId) {
     return res.status(401).json({ message: "User ID is required" });
@@ -138,7 +136,7 @@ router.delete("/:lectureId", async (req, res) => {
 
 // List annotations saved for a lecture.
 router.get("/:lectureId/notes", async (req, res) => {
-  const userId = getUserId(req);
+  const userId = req.auth.userId;
 
   if (!userId) {
     return res.status(401).json({ message: "User ID is required" });
@@ -174,7 +172,7 @@ router.get("/:lectureId/notes", async (req, res) => {
 
 // Save an annotation for a lecture.
 router.post("/:lectureId/notes", async (req, res) => {
-  const userId = getUserId(req);
+  const userId = req.auth.userId;
   const { title, content = "" } = req.body;
 
   if (!userId) {
@@ -212,9 +210,9 @@ router.post("/:lectureId/notes", async (req, res) => {
   }
 });
 
-// Delete an annotation owned by the current demo user.
+
 router.delete("/notes/:noteId", async (req, res) => {
-  const userId = getUserId(req);
+  const userId = req.auth.userId;
 
   if (!userId) {
     return res.status(401).json({ message: "User ID is required" });

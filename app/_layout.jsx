@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { setAuthTokenGetter } from "../services/api";
 
 import { ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
@@ -12,7 +14,13 @@ if (!publishableKey) {
 }
 
 function RootNavigator() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn, getToken } = useAuth();
+  useEffect(() => {
+    setAuthTokenGetter(() => getToken);
+    return () => {
+      setAuthTokenGetter(null);
+    };
+  }, [getToken]);
 
   if (!isLoaded) {
     return null;

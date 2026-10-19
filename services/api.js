@@ -1,21 +1,34 @@
 
-const API_BASE_URL = "http://10.1.24.62:5000";
+const API_BASE_URL = "http://192.168.43.158:5000";
 
-// DEMO ONLY: replace this with the verified Clerk user ID
-// after Clerk authentication has been implemented.
-const DEMO_USER_ID = "demo-student-001";
+// Clerk token getter will be registered by the authenticated app setup.
+let authTokenGetter = null;
+
+export function setAuthTokenGetter(getter) {
+  authTokenGetter = getter;
+}
 
 async function request(path, options = {}) {
   let response;
 
   try {
+    const token = authTokenGetter
+      ? await authTokenGetter()
+      : null;
+
+    const headers = {
+      "Content-Type": "application/json",
+      ...options.headers,
+    };
+
+    // Attach a Clerk token only when one is available.
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
     response = await fetch(`${API_BASE_URL}${path}`, {
       ...options,
-      headers: {
-        "Content-Type": "application/json",
-        "x-user-id": DEMO_USER_ID,
-        ...options.headers,
-      },
+      headers,
     });
   } catch (error) {
     throw new Error(
@@ -103,7 +116,7 @@ export const api = {
       method: "DELETE",
     }),
 
-  // Further-reading resources
+  // Further reading resources
   listResources: (moduleId) =>
     request(`/api/resources/module/${moduleId}`),
 

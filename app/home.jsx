@@ -1,5 +1,6 @@
 
 import React from "react";
+import { useRouter } from "expo-router";
 import { ScrollView, View } from "react-native";
 import { useUser } from "@clerk/expo";
 
@@ -14,6 +15,7 @@ import styles from "../styles/homeStyles";
 
 export default function Home() {
     const { user, isLoaded } = useUser();
+    const router = useRouter();
 
     const userName = isLoaded
         ? user?.firstName || user?.username || "Student"

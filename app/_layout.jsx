@@ -41,6 +41,7 @@ function RootNavigator() {
         <Stack.Screen name="profile" />
         <Stack.Screen name="security" />
         <Stack.Screen name="api-test" />
+        <Stack.Screen name="modules" />
       </Stack.Protected>
 
       {/* Screens available only to signed-out users */}

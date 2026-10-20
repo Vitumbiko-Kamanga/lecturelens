@@ -190,10 +190,6 @@ async function handleLogin() {
                 </Text>
             </Pressable>
 
-            <Text style={styles.demoNotice}>
-              Authentication is not connected yet. This screen
-              currently tests the interface only.
-            </Text>
           </View>
 
           <View style={styles.registerRow}>
@@ -322,13 +318,6 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "700",
-  },
-  demoNotice: {
-    color: "#64748B",
-    fontSize: 12,
-    lineHeight: 18,
-    textAlign: "center",
-    marginTop: 14,
   },
   registerRow: {
     flexDirection: "row",

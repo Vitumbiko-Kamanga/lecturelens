@@ -15,6 +15,12 @@ async function request(path, options = {}) {
     const token = authTokenGetter
       ? await authTokenGetter()
       : null;
+    
+    console.log("[LectureLens Auth Debug]", {
+      path,
+      getterRegistered: typeof authTokenGetter === "function",
+      tokenReceived: Boolean(token),
+    });
 
     const headers = {
       "Content-Type": "application/json",
@@ -50,10 +56,16 @@ async function request(path, options = {}) {
   }
 
   if (!response.ok) {
-    throw new Error(
-      data?.message || `Request failed with status ${response.status}`
-    );
-  }
+  console.log("[LectureLens API Error]", {
+    path,
+    status: response.status,
+    message: data?.message,
+  });
+
+  throw new Error(
+    data?.message || `Request failed with status ${response.status}`
+  );
+}
 
   return data;
 }

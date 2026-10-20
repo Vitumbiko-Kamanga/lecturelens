@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { setAuthTokenGetter } from "../services/api";
 
 import { ClerkProvider, useAuth } from '@clerk/expo';
@@ -13,10 +13,14 @@ if (!publishableKey) {
   );
 }
 
+
 function RootNavigator() {
   const { isLoaded, isSignedIn, getToken } = useAuth();
-  useEffect(() => {
-    setAuthTokenGetter(() => getToken);
+
+  useLayoutEffect(() => {
+    // Register the function that retrieves the actual Clerk token.
+    setAuthTokenGetter(getToken);
+
     return () => {
       setAuthTokenGetter(null);
     };
@@ -48,6 +52,7 @@ function RootNavigator() {
     </Stack>
   );
 }
+
 
 export default function Layout() {
   return (

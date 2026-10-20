@@ -66,6 +66,13 @@ async function handleLogin() {
     }
 
     // Step 3: Activate the session after successful authentication.
+    console.log("Clerk sign-in status:", signIn.status);
+
+    console.log(
+      "Supported second factors:",
+      JSON.stringify(signIn.supportedSecondFactors, null, 2)
+    );
+
     if (signIn.status === "complete") {
       const { error: finalizeError } = await signIn.finalize();
 

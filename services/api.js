@@ -123,6 +123,12 @@ export const api = {
       body: JSON.stringify(note),
     }),
 
+  updateNote: (noteId, note) =>
+    request(`/api/lectures/notes/${noteId}`, {
+      method: "PUT",
+      body: JSON.stringify(note),
+  }),
+
   deleteNote: (noteId) =>
     request(`/api/lectures/notes/${noteId}`, {
       method: "DELETE",

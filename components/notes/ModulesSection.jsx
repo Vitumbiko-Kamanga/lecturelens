@@ -28,6 +28,7 @@ export default function ModulesSection() {
   const [notes, setNotes] = useState([]);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [editingNoteId, setEditingNoteId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lecturesLoading, setLecturesLoading] = useState(false);
   const [notesLoading, setNotesLoading] = useState(false);
@@ -93,6 +94,7 @@ export default function ModulesSection() {
     }
   }
 
+ 
   async function saveNote() {
     if (!selectedLecture) {
       Alert.alert("Select a lecture", "Choose a lecture before saving a note.");
@@ -110,30 +112,65 @@ export default function ModulesSection() {
     setSaving(true);
 
     try {
-      const result = await api.createNote(selectedLecture.id, {
+      const noteData = {
         title: title.trim(),
         content: content.trim(),
-      });
+      };
 
-      // Use the returned note if available; otherwise reload from the server.
-      const savedNote = result?.note || result;
+      if (editingNoteId !== null) {
+        const result = await api.updateNote(editingNoteId, noteData);
+        const updatedNote = result?.note || result;
 
-      if (savedNote?.id) {
-        setNotes((previous) => [savedNote, ...previous]);
+        if (!updatedNote?.id) {
+          throw new Error("The updated note was not returned by the server.");
+        }
+
+        setNotes((previous) =>
+          previous.map((note) =>
+            note.id === updatedNote.id ? updatedNote : note
+          )
+        );
+
+        Alert.alert("Updated", "Your note has been updated.");
       } else {
-        const refreshed = await api.listNotes(selectedLecture.id);
-        setNotes(getItems(refreshed, "notes"));
+        const result = await api.createNote(selectedLecture.id, noteData);
+        const savedNote = result?.note || result;
+
+        if (savedNote?.id) {
+          setNotes((previous) => [savedNote, ...previous]);
+        } else {
+          const refreshed = await api.listNotes(selectedLecture.id);
+          setNotes(getItems(refreshed, "notes"));
+        }
+
+        Alert.alert("Saved", "Your note has been saved.");
       }
 
       setTitle("");
       setContent("");
-      Alert.alert("Saved", "Your note has been saved.");
+      setEditingNoteId(null);
     } catch (err) {
-      Alert.alert("Could not save note", err.message || "Please try again.");
+      Alert.alert(
+        editingNoteId !== null ? "Could not update note" : "Could not save note",
+        err.message || "Please try again."
+      );
     } finally {
       setSaving(false);
     }
   }
+
+  function editNote(note) {
+    setEditingNoteId(note.id);
+    setTitle(note.title || "");
+    setContent(note.content || "");
+  }
+
+  function cancelEdit() {
+    setEditingNoteId(null);
+    setTitle("");
+    setContent("");
+  }
+
 
   function confirmDelete(note) {
     Alert.alert("Delete note?", "This action cannot be undone.", [
@@ -277,10 +314,33 @@ export default function ModulesSection() {
             disabled={saving}
             style={[styles.saveButton, saving && { opacity: 0.6 }]}
           >
-            <Text style={styles.saveButtonText}>
-              {saving ? "Saving..." : "Save Note"}
+                        <Text style={styles.saveButtonText}>
+              {saving
+                ? editingNoteId !== null
+                  ? "Updating..."
+                  : "Saving..."
+                : editingNoteId !== null
+                  ? "Update Note"
+                  : "Save Note"}
             </Text>
           </TouchableOpacity>
+
+                    {editingNoteId !== null && (
+            <TouchableOpacity
+              onPress={cancelEdit}
+              disabled={saving}
+              style={{
+                padding: 12,
+                alignItems: "center",
+                marginTop: -12,
+                marginBottom: 12,
+              }}
+            >
+              <Text style={{ color: NAVY, fontWeight: "600" }}>
+                Cancel Editing
+              </Text>
+            </TouchableOpacity>
+          )}
 
           <Text style={styles.panelTitle}>Saved notes ({notes.length})</Text>
 
@@ -299,9 +359,17 @@ export default function ModulesSection() {
                     {note.content || "No content"}
                   </Text>
                 </View>
-                <TouchableOpacity onPress={() => confirmDelete(note)}>
-                  <Text style={styles.deleteText}>Delete</Text>
-                </TouchableOpacity>
+                                <View style={{ alignItems: "flex-end", gap: 12 }}>
+                  <TouchableOpacity onPress={() => editNote(note)}>
+                    <Text style={{ color: NAVY, fontWeight: "700", fontSize: 12 }}>
+                      Edit
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity onPress={() => confirmDelete(note)}>
+                    <Text style={styles.deleteText}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ))
           )}

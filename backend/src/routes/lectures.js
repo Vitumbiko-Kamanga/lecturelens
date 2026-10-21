@@ -211,6 +211,60 @@ router.post("/:lectureId/notes", async (req, res) => {
 });
 
 
+ // Update a saved annotation owned by the authenticated user.
+router.put("/notes/:noteId", async (req, res) => {
+  const userId = req.auth.userId;
+  const { title, content = "" } = req.body;
+
+  if (!userId) {
+    return res.status(401).json({ message: "User ID is required" });
+  }
+
+  if (typeof title !== "string" || !title.trim()) {
+    return res.status(400).json({
+      message: "Annotation title is required",
+    });
+  }
+
+  if (typeof content !== "string") {
+    return res.status(400).json({
+      message: "Note content must be text",
+    });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE notes n
+       SET title = $1,
+           content = $2,
+           updated_at = NOW()
+       FROM lectures l
+       JOIN modules m ON m.id = l.module_id
+       WHERE n.lecture_id = l.id
+         AND n.id = $3
+         AND n.user_id = $4
+         AND m.user_id = $4
+       RETURNING n.id, n.lecture_id, n.title,
+                 n.content, n.created_at, n.updated_at`,
+      [title.trim(), content.trim(), req.params.noteId, userId]
+    );
+
+    if (!result.rowCount) {
+      return res.status(404).json({
+        message: "Annotation not found",
+      });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Update annotation error:", error);
+    res.status(500).json({
+      message: "Could not update annotation",
+    });
+  }
+});
+
+
 router.delete("/notes/:noteId", async (req, res) => {
   const userId = req.auth.userId;
 

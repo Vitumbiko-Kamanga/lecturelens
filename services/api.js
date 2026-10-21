@@ -1,5 +1,5 @@
 
-const API_BASE_URL = "http://192.168.43.158:5000";
+const API_BASE_URL = "http://10.1.24.205:5000";
 
 // Clerk token getter will be registered by the authenticated app setup.
 let authTokenGetter = null;

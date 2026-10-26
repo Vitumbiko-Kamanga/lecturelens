@@ -70,6 +70,84 @@ async function request(path, options = {}) {
   return data;
 }
 
+
+async function uploadRecording(lectureId, audioUri, title) {
+  if (!authTokenGetter) {
+    throw new Error("Authentication is not ready. Please sign in again.");
+  }
+
+  const token = await authTokenGetter();
+
+  if (!token) {
+    throw new Error("Your session has expired. Please sign in again.");
+  }
+
+  const uriWithoutQuery = audioUri.split("?")[0];
+  const extension =
+    uriWithoutQuery.match(/\.([a-zA-Z0-9]+)$/)?.[1]?.toLowerCase() ||
+    "m4a";
+
+  const mimeTypes = {
+    m4a: "audio/mp4",
+    mp3: "audio/mpeg",
+    wav: "audio/wav",
+    aac: "audio/aac",
+    mp4: "audio/mp4",
+    "3gp": "audio/3gpp",
+    ogg: "audio/ogg",
+    webm: "audio/webm",
+  };
+
+  const formData = new FormData();
+
+  formData.append("recording", {
+    uri: audioUri,
+    name: `lecture-recording-${Date.now()}.${extension}`,
+    type: mimeTypes[extension] || "application/octet-stream",
+  });
+
+  formData.append("title", title?.trim() || "Lecture recording");
+
+  let response;
+
+  try {
+    response = await fetch(
+      `${API_BASE_URL}/api/recordings/lecture/${encodeURIComponent(lectureId)}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      }
+    );
+  } catch (error) {
+    throw new Error(
+      `Cannot upload recording to ${API_BASE_URL}. Check your network connection and ensure the backend is running.`
+    );
+  }
+
+  const responseText = await response.text();
+  let data = null;
+
+  if (responseText) {
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      data = { message: responseText };
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      data?.message || `Recording upload failed (${response.status}).`
+    );
+  }
+
+  return data;
+}
+
+
 export const api = {
   // Connection checks
   testBackend: () => request("/"),
@@ -94,6 +172,15 @@ export const api = {
     request(`/api/modules/${id}`, {
       method: "DELETE",
     }),
+
+  // Lecture recordings
+  uploadRecording: (lectureId, audioUri, title) =>
+    uploadRecording(lectureId, audioUri, title),
+
+  listRecordings: (lectureId) =>
+    request(
+      `/api/recordings/lecture/${encodeURIComponent(lectureId)}`
+    ),
 
   // Lectures
   listLectures: (moduleId) =>

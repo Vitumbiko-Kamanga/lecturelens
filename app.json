@@ -29,7 +29,14 @@
     "plugins": [
       "expo-router",
       "@clerk/expo",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow LectureLens to record lecture audio."
+        }
+      ],
+      "expo-asset"
     ]
   }
 }

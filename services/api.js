@@ -148,6 +148,28 @@ async function uploadRecording(lectureId, audioUri, title) {
 }
 
 
+async function getRecordingPlaybackSource(recordingId) {
+  if (!authTokenGetter) {
+    throw new Error("Authentication is not ready. Please sign in again.");
+  }
+
+  const token = await authTokenGetter();
+
+  if (!token) {
+    throw new Error("Your session has expired. Please sign in again.");
+  }
+
+  return {
+    uri: `${API_BASE_URL}/api/recordings/${encodeURIComponent(
+      recordingId
+    )}/file`,
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  };
+}
+
+
 export const api = {
   // Connection checks
   testBackend: () => request("/"),
@@ -174,6 +196,8 @@ export const api = {
     }),
 
   // Lecture recordings
+  
+  // Lecture recordings
   uploadRecording: (lectureId, audioUri, title) =>
     uploadRecording(lectureId, audioUri, title),
 
@@ -181,6 +205,15 @@ export const api = {
     request(
       `/api/recordings/lecture/${encodeURIComponent(lectureId)}`
     ),
+
+  getRecordingPlaybackSource: (recordingId) =>
+    getRecordingPlaybackSource(recordingId),
+
+  deleteRecording: (recordingId) =>
+    request(`/api/recordings/${encodeURIComponent(recordingId)}`, {
+      method: "DELETE",
+    }),
+
 
   // Lectures
   listLectures: (moduleId) =>

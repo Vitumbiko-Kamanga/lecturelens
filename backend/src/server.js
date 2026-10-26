@@ -8,6 +8,7 @@ const pool = require("./config/database");
 const modulesRouter = require("./routes/modules");
 const lecturesRouter = require("./routes/lectures");
 const resourcesRouter = require("./routes/resources");
+const recordingsRouter = require("./routes/recordings");
 
 const app = express();
 
@@ -38,6 +39,7 @@ app.get("/db-test", async (req, res) => {
 app.use("/api/modules", modulesRouter);
 app.use("/api/lectures", lecturesRouter);
 app.use("/api/resources", resourcesRouter);
+app.use("/api/recordings", recordingsRouter);
 
 app.use((req, res) => {
   res.status(404).json({
@@ -102,6 +104,21 @@ async function initializeDatabase() {
       author VARCHAR(200) DEFAULT '',
       url TEXT DEFAULT '',
       resource_type VARCHAR(50) DEFAULT 'other',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS recordings (
+      id BIGSERIAL PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      lecture_id BIGINT NOT NULL REFERENCES lectures(id)
+        ON DELETE CASCADE,
+      title VARCHAR(200) NOT NULL,
+      stored_filename VARCHAR(255) NOT NULL UNIQUE,
+      original_filename VARCHAR(255) NOT NULL,
+      mime_type VARCHAR(100) NOT NULL,
+      file_size BIGINT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);

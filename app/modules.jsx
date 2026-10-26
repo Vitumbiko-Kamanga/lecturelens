@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { api } from "../services/api";
+import LectureRecordings from "../components/recordings/LectureRecordings";
 
 const NAVY = "#12325B";
 const GOLD = "#F2B544";
@@ -282,16 +283,21 @@ export default function ModulesScreen() {
               {(lectures[module.id] || []).length} saved lecture(s)
             </Text>
 
+            
             {(lectures[module.id] || []).map((lecture) => (
               <View key={lecture.id} style={styles.lectureRow}>
                 <Text style={styles.lectureTitle}>
                   {lecture.title || "Untitled lecture"}
                 </Text>
+
                 {!!lecture.topic && (
                   <Text style={styles.lectureTopic}>{lecture.topic}</Text>
                 )}
+
+                <LectureRecordings lectureId={lecture.id} />
               </View>
             ))}
+
           </View>
         ))
       )}

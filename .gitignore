@@ -41,3 +41,5 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+# User-uploaded lecture recordings
+backend/uploads/

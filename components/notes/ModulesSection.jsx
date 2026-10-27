@@ -373,6 +373,16 @@ function formatTimestamp(seconds) {
           <Text style={styles.muted}>{selectedLecture.title}</Text>
 
           <Text style={styles.panelTitle}>Recordings & transcripts</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Search loaded transcripts..."
+            placeholderTextColor="#777777"
+            value={transcriptSearch}
+            onChangeText={setTranscriptSearch}
+            autoCapitalize="none"
+            autoCorrect={false}
+            accessibilityLabel="Search loaded lecture transcripts"
+          />
 
           {recordingsLoading ? (
             <ActivityIndicator color={NAVY} />

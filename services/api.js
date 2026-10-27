@@ -241,6 +241,12 @@ export const api = {
       body: JSON.stringify(lecture),
     }),
 
+  updateLecture: (lectureId, lecture) =>
+    request(`/api/lectures/${encodeURIComponent(lectureId)}`, {
+      method: "PUT",
+      body: JSON.stringify(lecture),
+    }),
+
   deleteLecture: (lectureId) =>
     request(`/api/lectures/${lectureId}`, {
       method: "DELETE",

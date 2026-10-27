@@ -189,6 +189,46 @@ async function handleUpdateLecture(lecture) {
   }
 }
 
+async function handleDeleteLecture(lecture) {
+  try {
+    setSaving(true);
+
+    await api.deleteLecture(lecture.id);
+
+    if (editingLectureId === lecture.id) {
+      cancelEditingLecture();
+    }
+
+    await loadModules();
+
+    Alert.alert("Success", "The lecture has been deleted.");
+  } catch (err) {
+    Alert.alert(
+      "Could not delete lecture",
+      err.message || "Please try again."
+    );
+  } finally {
+    setSaving(false);
+  }
+}
+
+function confirmDeleteLecture(lecture) {
+  Alert.alert(
+    "Delete lecture?",
+    `Are you sure you want to delete "${lecture.title || "Untitled lecture"}"? This action may affect associated notes and recordings.`,
+    [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => handleDeleteLecture(lecture),
+      },
+    ]
+  );
+}
   function confirmDelete(module) {
     Alert.alert(
       "Delete module?",
@@ -439,13 +479,23 @@ async function handleUpdateLecture(lecture) {
                         <Text style={styles.lectureTopic}>{lecture.topic}</Text>
                       )}
 
-                      <TouchableOpacity
-                        style={styles.editLink}
-                        onPress={() => startEditingLecture(lecture)}
-                        disabled={saving}
-                      >
-                        <Text style={styles.editLinkText}>Edit Lecture</Text>
-                      </TouchableOpacity>
+                      <View style={styles.lectureActions}>
+                        <TouchableOpacity
+                          style={styles.editLink}
+                          onPress={() => startEditingLecture(lecture)}
+                          disabled={saving}
+                        >
+                          <Text style={styles.editLinkText}>Edit Lecture</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={styles.deleteLectureLink}
+                          onPress={() => confirmDeleteLecture(lecture)}
+                          disabled={saving}
+                        >
+                          <Text style={styles.deleteLectureText}>Delete Lecture</Text>
+                        </TouchableOpacity>
+                      </View>
                     </>
                   )}
 
@@ -617,6 +667,21 @@ editLink: {
 },
 editLinkText: {
   color: NAVY,
+  fontWeight: "700",
+  fontSize: 13,
+},
+deleteLectureLink: {
+  alignSelf: "flex-start",
+  marginTop: 8,
+  marginBottom: 4,
+  paddingVertical: 5,
+  paddingHorizontal: 8,
+  borderRadius: 6,
+  backgroundColor: "#FEE4E2",
+},
+
+deleteLectureText: {
+  color: "#B42318",
   fontWeight: "700",
   fontSize: 13,
 },

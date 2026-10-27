@@ -123,6 +123,23 @@ async function initializeDatabase() {
     )
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS transcripts (
+      id BIGSERIAL PRIMARY KEY,
+      recording_id BIGINT NOT NULL UNIQUE
+        REFERENCES recordings(id) ON DELETE CASCADE,
+      user_id TEXT NOT NULL,
+      transcript TEXT NOT NULL DEFAULT '',
+      segments JSONB NOT NULL DEFAULT '[]'::jsonb,
+      language VARCHAR(20),
+      language_probability REAL,
+      duration_seconds REAL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+
   console.log("LectureLens database tables are ready.");
 }
 

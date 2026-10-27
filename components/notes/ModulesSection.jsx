@@ -34,6 +34,7 @@ export default function ModulesSection() {
   const [expandedTranscriptId, setExpandedTranscriptId] = useState(null);
   const [transcriptLoadingId, setTranscriptLoadingId] = useState(null);
   const [transcriptErrors, setTranscriptErrors] = useState({});
+  const [transcriptSearch, setTranscriptSearch] = useState("");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [editingNoteId, setEditingNoteId] = useState(null);

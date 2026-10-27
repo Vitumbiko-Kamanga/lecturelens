@@ -48,6 +48,11 @@ export default function LectureRecordings({ lectureId }) {
   const [busyId, setBusyId] = useState(null);
   const [error, setError] = useState("");
 
+  const [transcribingId, setTranscribingId] = useState(null);
+  const [transcripts, setTranscripts] = useState({});
+  const [transcriptLoadingId, setTranscriptLoadingId] = useState(null);
+  const [expandedTranscriptId, setExpandedTranscriptId] = useState(null);
+
   const loadRecordings = useCallback(async () => {
     try {
       setError("");
@@ -101,6 +106,71 @@ export default function LectureRecordings({ lectureId }) {
       setBusyId(null);
     }
   }
+
+  async function handleTranscribe(recording) {
+    const recordingId = String(recording.id);
+
+    if (transcribingId || transcriptLoadingId) return;
+
+    try {
+      setTranscribingId(recordingId);
+      setError("");
+
+      const result = await api.transcribeRecording(recording.id);
+      const transcript = result?.transcript;
+
+      if (!transcript) {
+        throw new Error("The server did not return the saved transcript.");
+      }
+
+      setTranscripts((previous) => ({
+        ...previous,
+        [recordingId]: transcript,
+      }));
+
+      setExpandedTranscriptId(recordingId);
+      Alert.alert("Transcription complete", "Your transcript has been saved.");
+    } catch (err) {
+      setError(err.message || "Could not transcribe this recording.");
+    } finally {
+      setTranscribingId(null);
+    }
+  }
+
+  async function handleViewTranscript(recording) {
+    const recordingId = String(recording.id);
+
+    if (transcriptLoadingId || transcribingId) return;
+
+    if (expandedTranscriptId === recordingId) {
+      setExpandedTranscriptId(null);
+      return;
+    }
+
+    try {
+      setTranscriptLoadingId(recordingId);
+      setError("");
+
+      const result = await api.getRecordingTranscript(recording.id);
+      const transcript = result?.transcript;
+
+      if (!transcript) {
+        throw new Error("The server did not return the transcript.");
+      }
+
+      setTranscripts((previous) => ({
+        ...previous,
+        [recordingId]: transcript,
+      }));
+
+      setExpandedTranscriptId(recordingId);
+    } catch (err) {
+      setError(err.message || "Could not load the transcript.");
+    } finally {
+      setTranscriptLoadingId(null);
+    }
+  }
+
 
   function confirmDelete(recording) {
     Alert.alert(
@@ -266,9 +336,96 @@ export default function LectureRecordings({ lectureId }) {
                         : "Audio"}
                     </Text>
                   </View>
+  <View style={styles.transcriptionActions}>
+    <TouchableOpacity
+      style={styles.transcribeButton}
+      onPress={() => handleTranscribe(recording)}
+      disabled={Boolean(transcribingId || transcriptLoadingId || busyId)}
+    >
+      {transcribingId === String(recording.id) ? (
+        <ActivityIndicator color="#FFFFFF" size="small" />
+      ) : (
+        <Ionicons name="text-outline" size={17} color="#FFFFFF" />
+      )}
+      <Text style={styles.transcribeButtonText}>
+        {transcribingId === String(recording.id)
+          ? "Transcribing..."
+          : "Transcribe"}
+      </Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity
+      style={styles.viewTranscriptButton}
+      onPress={() => handleViewTranscript(recording)}
+      disabled={Boolean(transcribingId || transcriptLoadingId || busyId)}
+    >
+      {transcriptLoadingId === String(recording.id) ? (
+        <ActivityIndicator color={NAVY} size="small" />
+      ) : (
+        <Ionicons
+          name="document-text-outline"
+          size={17}
+          color={NAVY}
+        />
+      )}
+      <Text style={styles.viewTranscriptButtonText}>
+        {expandedTranscriptId === String(recording.id)
+          ? "Hide transcript"
+          : "View transcript"}
+      </Text>
+    </TouchableOpacity>
+  </View>
+
+  {expandedTranscriptId === String(recording.id) &&
+    transcripts[String(recording.id)] && (
+      <View style={styles.transcriptCard}>
+        <Text style={styles.transcriptHeading}>Transcript</Text>
+
+        <Text style={styles.transcriptMetadata}>
+          Language: {transcripts[String(recording.id)].language || "Unknown"}
+          {transcripts[String(recording.id)].duration_seconds != null
+            ? `  ·  ${formatTime(
+                transcripts[String(recording.id)].duration_seconds
+              )}`
+            : ""}
+        </Text>
+
+        <Text style={styles.transcriptText}>
+          {transcripts[String(recording.id)].transcript ||
+            "No speech was recognized in this recording."}
+        </Text>
+
+        {Array.isArray(transcripts[String(recording.id)].segments) &&
+          transcripts[String(recording.id)].segments.length > 0 && (
+            <View style={styles.segmentsContainer}>
+              <Text style={styles.segmentsHeading}>
+                Timestamped segments
+              </Text>
+
+              {transcripts[String(recording.id)].segments.map(
+                (segment, index) => (
+                  <View
+                    key={`${recording.id}-segment-${index}`}
+                    style={styles.segmentRow}
+                  >
+                    <Text style={styles.segmentTime}>
+                      {formatTime(segment.start)}
+                    </Text>
+                    <Text style={styles.segmentText}>
+                      {segment.text}
+                    </Text>
+                  </View>
+                )
+              )}
+            </View>
+          )}
+      </View>
+    )}
+
                 </View>
               </View>
             </View>
+
           );
         })
       )}
@@ -429,4 +586,98 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 12,
   },
+  transcriptionActions: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 12,
+  },
+  transcribeButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    backgroundColor: NAVY,
+  },
+  transcribeButtonText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  viewTranscriptButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    backgroundColor: "#FFF4D6",
+    borderWidth: 1,
+    borderColor: GOLD,
+  },
+  viewTranscriptButtonText: {
+    color: NAVY,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  transcriptCard: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 9,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#D0D5DD",
+  },
+  transcriptHeading: {
+    color: NAVY,
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  transcriptMetadata: {
+    color: MUTED,
+    fontSize: 11,
+    marginTop: 5,
+    marginBottom: 10,
+  },
+  transcriptText: {
+    color: "#101828",
+    fontSize: 13,
+    lineHeight: 21,
+  },
+  segmentsContainer: {
+    marginTop: 14,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#E5EAF0",
+  },
+  segmentsHeading: {
+    color: NAVY,
+    fontSize: 12,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  segmentRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    marginBottom: 9,
+  },
+  segmentTime: {
+    minWidth: 40,
+    color: NAVY,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  segmentText: {
+    flex: 1,
+    color: "#344054",
+    fontSize: 12,
+    lineHeight: 19,
+  },
+
 });

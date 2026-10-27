@@ -221,7 +221,36 @@ export default function ModulesScreen() {
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.sectionTitle}>Your modules</Text>
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 14,
+        }}
+      >
+        <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>
+          Your modules
+        </Text>
+
+        <TouchableOpacity
+          onPress={loadModules}
+          disabled={loading || saving}
+          style={{
+            backgroundColor: "#FFF4D6",
+            borderWidth: 1,
+            borderColor: GOLD,
+            borderRadius: 8,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            opacity: loading || saving ? 0.6 : 1,
+          }}
+        >
+          <Text style={{ color: NAVY, fontWeight: "700" }}>
+            Refresh
+          </Text>
+        </TouchableOpacity>
+</View>
 
       {loading ? (
         <ActivityIndicator size="large" color={NAVY} />

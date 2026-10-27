@@ -35,6 +35,10 @@ export default function ModulesSection() {
   const [transcriptLoadingId, setTranscriptLoadingId] = useState(null);
   const [transcriptErrors, setTranscriptErrors] = useState({});
   const [transcriptSearch, setTranscriptSearch] = useState("");
+  const [searchSubmitted, setSearchSubmitted] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState("");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [editingNoteId, setEditingNoteId] = useState(null);
@@ -90,11 +94,16 @@ async function openLecture(lecture) {
   setSelectedLecture(lecture);
   setNotes([]);
   setRecordings([]);
+  setTranscriptSearch("");
   setExpandedTranscriptId(null);
   setNotesLoading(true);
   setRecordingsLoading(true);
   setError("");
   setRecordingsError("");
+  setTranscriptSearch("");
+  setSearchSubmitted("");
+  setSearchResults([]);
+  setSearchError("");
 
   // Load notes without preventing recordings from loading if notes fail.
   try {
@@ -166,6 +175,107 @@ async function toggleTranscript(recording) {
     setTranscriptLoadingId(null);
   }
 }
+const handleTranscriptSearch = async () => {
+  const term = transcriptSearch.trim().toLowerCase();
+
+  setSearchSubmitted(term);
+  setSearchResults([]);
+  setSearchError("");
+
+  if (!term) {
+    setSearchError("Please enter a word or phrase to search.");
+    return;
+  }
+
+  if (recordings.length === 0) {
+    setSearchError("There are no recordings to search for this lecture.");
+    return;
+  }
+
+  setSearchLoading(true);
+
+  try {
+    const results = [];
+    const updatedTranscripts = {};
+
+    for (const recording of recordings) {
+      try {
+        const response = await api.getRecordingTranscript(recording.id);
+        const transcript = response?.transcript;
+
+        if (!transcript) {
+          continue;
+        }
+
+        updatedTranscripts[recording.id] = transcript;
+
+        const segments = Array.isArray(transcript.segments)
+          ? transcript.segments
+          : [];
+
+        if (segments.length > 0) {
+          segments.forEach((segment, index) => {
+            const text = String(segment.text || "");
+
+            if (text.toLowerCase().includes(term)) {
+              results.push({
+                recordingId: recording.id,
+                recordingTitle:
+                  recording.title ||
+                  recording.original_filename ||
+                  "Lecture recording",
+                start: segment.start,
+                end: segment.end,
+                text,
+                key: `${recording.id}-${index}`,
+              });
+            }
+          });
+        } else {
+          const text = String(transcript.transcript || "");
+
+          if (text.toLowerCase().includes(term)) {
+            results.push({
+              recordingId: recording.id,
+              recordingTitle:
+                recording.title ||
+                recording.original_filename ||
+                "Lecture recording",
+              text,
+              key: `${recording.id}-full`,
+            });
+          }
+        }
+      } catch (error) {
+        // A missing transcript for one recording should not
+        // prevent the other recordings from being searched.
+        console.log(
+          `Could not search transcript for recording ${recording.id}:`,
+          error.message
+        );
+      }
+    }
+
+    setTranscriptsByRecording((previous) => ({
+      ...previous,
+      ...updatedTranscripts,
+    }));
+
+    setSearchResults(results);
+
+    if (results.length === 0) {
+      setSearchError(
+        `No matches found for "${transcriptSearch.trim()}".`
+      );
+    }
+  } catch (error) {
+    setSearchError(
+      error.message || "Unable to search saved transcripts."
+    );
+  } finally {
+    setSearchLoading(false);
+  }
+};
 
 function formatTimestamp(seconds) {
   const totalSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
@@ -375,14 +485,71 @@ function formatTimestamp(seconds) {
           <Text style={styles.panelTitle}>Recordings & transcripts</Text>
           <TextInput
             style={styles.input}
-            placeholder="Search loaded transcripts..."
+            placeholder="Search saved transcripts..."
             placeholderTextColor="#777777"
             value={transcriptSearch}
             onChangeText={setTranscriptSearch}
+            onSubmitEditing={handleTranscriptSearch}
+            returnKeyType="search"
             autoCapitalize="none"
             autoCorrect={false}
-            accessibilityLabel="Search loaded lecture transcripts"
+            accessibilityLabel="Search saved lecture transcripts"
           />
+
+          <TouchableOpacity
+            style={styles.transcriptButton}
+            onPress={handleTranscriptSearch}
+            disabled={searchLoading || recordingsLoading}
+          >
+            {searchLoading ? (
+              <ActivityIndicator color={NAVY} />
+            ) : (
+              <Text style={styles.transcriptButtonText}>
+                Search transcripts
+              </Text>
+            )}
+          </TouchableOpacity>
+
+            {searchLoading && (
+              <Text style={styles.muted}>
+                Searching saved transcripts...
+              </Text>
+            )}
+
+            {!!searchError && (
+              <Text style={styles.error}>
+                {searchError}
+              </Text>
+            )}
+
+            {searchSubmitted !== "" && searchResults.length > 0 && (
+              <View style={styles.transcriptContent}>
+                <Text style={styles.recordingTitle}>
+                  {searchResults.length} matching segment
+                  {searchResults.length === 1 ? "" : "s"}
+                </Text>
+
+                {searchResults.map((result) => (
+                  <View key={result.key} style={styles.transcriptSegment}>
+                    <Text style={styles.recordingTitle}>
+                      {result.recordingTitle}
+                    </Text>
+
+                    {result.start !== undefined && (
+                      <Text style={styles.timestamp}>
+                        {formatTimestamp(result.start)}
+                        {result.end !== undefined &&
+                          ` – ${formatTimestamp(result.end)}`}
+                      </Text>
+                    )}
+
+                    <Text style={styles.transcriptText}>
+                      {result.text}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
 
           {recordingsLoading ? (
             <ActivityIndicator color={NAVY} />
@@ -403,7 +570,12 @@ function formatTimestamp(seconds) {
               const segments = Array.isArray(savedTranscript?.segments)
                 ? savedTranscript.segments
                 : [];
-
+              const searchTerm = transcriptSearch.trim().toLowerCase();
+              const filteredSegments = segments.filter((segment) =>
+                String(segment.text || "")
+                  .toLowerCase()
+                  .includes(searchTerm)
+              );
               return (
                 <View key={recording.id} style={styles.recordingCard}>
                   <Text style={styles.recordingTitle}>
@@ -456,24 +628,29 @@ function formatTimestamp(seconds) {
                       )}
 
                       {segments.length > 0 ? (
-                        segments.map((segment, index) => (
-                          <View
-                            key={`${recording.id}-segment-${index}`}
-                            style={styles.transcriptSegment}
-                          >
-                            <Text style={styles.timestamp}>
-                              {formatTimestamp(segment.start)} –{" "}
-                              {formatTimestamp(segment.end)}
-                            </Text>
-                            <Text style={styles.transcriptText}>
-                              {segment.text || ""}
-                            </Text>
-                          </View>
-                        ))
+                        filteredSegments.length > 0 ? (
+                          filteredSegments.map((segment, index) => (
+                            <View
+                              key={`${recording.id}-segment-${index}`}
+                              style={styles.transcriptSegment}
+                            >
+                              <Text style={styles.timestamp}>
+                                {formatTimestamp(segment.start)} – {formatTimestamp(segment.end)}
+                              </Text>
+
+                              <Text style={styles.transcriptText}>
+                                {segment.text || ""}
+                              </Text>
+                            </View>
+                          ))
+                        ) : (
+                          <Text style={styles.emptyText}>
+                            No matching transcript segments found.
+                          </Text>
+                        )
                       ) : (
                         <Text style={styles.transcriptText}>
-                          {savedTranscript.transcript ||
-                            "This transcript has no text."}
+                          {savedTranscript.transcript || "This transcript has no text."}
                         </Text>
                       )}
                     </View>

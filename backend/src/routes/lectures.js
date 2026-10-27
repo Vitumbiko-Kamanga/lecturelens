@@ -75,6 +75,64 @@ router.post("/module/:moduleId", async (req, res) => {
   }
 });
 
+// Update a lecture belonging to a module owned by the authenticated user.
+router.put("/:lectureId", async (req, res) => {
+  const userId = req.auth.userId;
+  const { title, topic = "", lecture_date } = req.body;
+
+  if (!userId) {
+    return res.status(401).json({
+      message: "User ID is required",
+    });
+  }
+
+  if (typeof title !== "string" || !title.trim()) {
+    return res.status(400).json({
+      message: "Lecture title is required",
+    });
+  }
+
+  if (typeof topic !== "string") {
+    return res.status(400).json({
+      message: "Lecture topic must be text",
+    });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE lectures l
+       SET title = $1,
+           topic = $2,
+           lecture_date = COALESCE($3::timestamptz, l.lecture_date)
+       FROM modules m
+       WHERE l.module_id = m.id
+         AND l.id = $4
+         AND m.user_id = $5
+       RETURNING l.id, l.module_id, l.title, l.topic,
+                 l.lecture_date, l.created_at`,
+      [
+        title.trim(),
+        topic.trim(),
+        lecture_date || null,
+        req.params.lectureId,
+        userId,
+      ]
+    );
+
+    if (!result.rowCount) {
+      return res.status(404).json({
+        message: "Lecture not found",
+      });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error("Update lecture error:", error);
+    res.status(500).json({
+      message: "Could not update lecture",
+    });
+  }
+});
 
 router.get("/:lectureId", async (req, res) => {
   const userId = req.auth.userId;

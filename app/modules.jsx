@@ -45,13 +45,28 @@ export default function ModulesScreen() {
             const result = await api.listLectures(module.id);
             return [
               module.id,
-              Array.isArray(result) ? result : result?.lectures || [],
+              {
+                items: Array.isArray(result)
+                  ? result
+                  : result?.lectures || [],
+                error: "",
+              },
             ];
-          } catch {
-            return [module.id, []];
+          } catch (err) {
+            return [
+              module.id,
+              {
+                items: [],
+                error: err.message || "Could not load lectures.",
+              },
+            ];
           }
         })
       );
+
+      setLectures(Object.fromEntries(lectureResults));
+
+      setLectures(Object.fromEntries(lectureResults));
 
       setLectures(Object.fromEntries(lectureResults));
     } catch (err) {
@@ -280,11 +295,16 @@ export default function ModulesScreen() {
             </TouchableOpacity>
 
             <Text style={styles.lectureCount}>
-              {(lectures[module.id] || []).length} saved lecture(s)
+              {(lectures[module.id]?.items || []).length} saved lecture(s)
             </Text>
 
-            
-            {(lectures[module.id] || []).map((lecture) => (
+            {!!lectures[module.id]?.error && (
+              <Text style={styles.error}>
+                Could not load this module's lectures: {lectures[module.id].error}
+              </Text>
+            )}
+
+            {(lectures[module.id]?.items || []).map((lecture) => (
               <View key={lecture.id} style={styles.lectureRow}>
                 <Text style={styles.lectureTitle}>
                   {lecture.title || "Untitled lecture"}

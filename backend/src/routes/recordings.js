@@ -197,6 +197,194 @@ router.get("/lecture/:lectureId", async (req, res) => {
   }
 });
 
+
+/**
+ * Transcribe an existing recording using the local Whisper service.
+ * Only the student who owns the recording can request transcription.
+ */
+router.post("/:recordingId/transcribe", async (req, res) => {
+  try {
+    const { recordingId } = req.params;
+    const userId = req.auth.userId;
+
+    // Find the recording and verify ownership.
+    const recordingResult = await pool.query(
+      `
+        SELECT
+          r.id,
+          r.user_id,
+          r.stored_filename,
+          r.original_filename,
+          r.mime_type
+        FROM recordings r
+        JOIN lectures l ON l.id = r.lecture_id
+        JOIN modules m ON m.id = l.module_id
+        WHERE r.id = $1
+          AND r.user_id = $2
+          AND m.user_id = $2
+      `,
+      [recordingId, userId]
+    );
+
+    if (recordingResult.rowCount === 0) {
+      return res.status(404).json({
+        message: "Recording not found or you do not have access to it.",
+      });
+    }
+
+    const recording = recordingResult.rows[0];
+
+    // Ensure the stored path cannot escape the recordings directory.
+    const recordingsDirectory = path.resolve(UPLOAD_DIR);
+    const filePath = path.resolve(
+      recordingsDirectory,
+      recording.stored_filename
+    );
+
+    if (!filePath.startsWith(recordingsDirectory + path.sep)) {
+      return res.status(400).json({
+        message: "Invalid recording file path.",
+      });
+    }
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        message: "The recording file could not be found.",
+      });
+    }
+
+    // Send the saved audio to the local Python transcription service.
+    const audioBuffer = await fs.promises.readFile(filePath);
+    const formData = new FormData();
+
+    formData.append(
+      "file",
+      new Blob([audioBuffer], {
+        type: recording.mime_type || "application/octet-stream",
+      }),
+      recording.original_filename
+    );
+
+    formData.append("language", "auto");
+
+    const transcriptionUrl =
+      `${process.env.TRANSCRIPTION_SERVICE_URL || "http://127.0.0.1:8001"}/transcribe`;
+
+    let transcriptionResponse;
+
+    try {
+      transcriptionResponse = await fetch(transcriptionUrl, {
+        method: "POST",
+        body: formData,
+        signal: AbortSignal.timeout(10 * 60 * 1000),
+      });
+    } catch (error) {
+      console.error("Whisper service connection error:", error);
+
+      return res.status(503).json({
+        message:
+          "The transcription service is unavailable. Make sure the Python service is running.",
+      });
+    }
+
+    const transcription = await transcriptionResponse.json().catch(() => null);
+
+    if (!transcriptionResponse.ok || !transcription?.success) {
+      console.error("Whisper transcription failed:", transcription);
+
+      return res.status(502).json({
+        message: "The transcription service could not process this recording.",
+        details: transcription?.detail || null,
+      });
+    }
+
+    // Save a new transcript or update the existing one for this recording.
+    const savedResult = await pool.query(
+      `
+        INSERT INTO transcripts (
+          recording_id,
+          user_id,
+          transcript,
+          segments,
+          language,
+          language_probability,
+          duration_seconds
+        )
+        VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7)
+        ON CONFLICT (recording_id)
+        DO UPDATE SET
+          user_id = EXCLUDED.user_id,
+          transcript = EXCLUDED.transcript,
+          segments = EXCLUDED.segments,
+          language = EXCLUDED.language,
+          language_probability = EXCLUDED.language_probability,
+          duration_seconds = EXCLUDED.duration_seconds,
+          updated_at = NOW()
+        RETURNING *
+      `,
+      [
+        recording.id,
+        userId,
+        transcription.transcript || "",
+        JSON.stringify(transcription.segments || []),
+        transcription.language || null,
+        transcription.language_probability ?? null,
+        transcription.duration_seconds ?? null,
+      ]
+    );
+
+    return res.json({
+      message: "Recording transcribed successfully.",
+      transcript: savedResult.rows[0],
+    });
+  } catch (error) {
+    console.error("Recording transcription error:", error);
+
+    return res.status(500).json({
+      message: "Could not transcribe this recording.",
+    });
+  }
+});
+
+/**
+ * Retrieve a saved transcript without transcribing the audio again.
+ */
+router.get("/:recordingId/transcript", async (req, res) => {
+  try {
+    const result = await pool.query(
+      `
+        SELECT t.*
+        FROM transcripts t
+        JOIN recordings r ON r.id = t.recording_id
+        JOIN lectures l ON l.id = r.lecture_id
+        JOIN modules m ON m.id = l.module_id
+        WHERE r.id = $1
+          AND r.user_id = $2
+          AND m.user_id = $2
+          AND t.user_id = $2
+      `,
+      [req.params.recordingId, req.auth.userId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        message: "Transcript not found. Transcribe the recording first.",
+      });
+    }
+
+    return res.json({
+      transcript: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Retrieve transcript error:", error);
+
+    return res.status(500).json({
+      message: "Could not retrieve the transcript.",
+    });
+  }
+});
+
+
 // Download a recording only if it belongs to the signed-in student.
 router.get("/:recordingId/file", async (req, res) => {
   try {

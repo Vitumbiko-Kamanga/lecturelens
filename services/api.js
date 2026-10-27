@@ -1,5 +1,5 @@
 
-const API_BASE_URL = "http://10.206.22.1:5000";
+const API_BASE_URL = "http://192.168.43.158:5000";
 
 // Clerk token getter will be registered by the authenticated app setup.
 let authTokenGetter = null;
@@ -208,6 +208,21 @@ export const api = {
 
   getRecordingPlaybackSource: (recordingId) =>
     getRecordingPlaybackSource(recordingId),
+
+  // Transcription
+  transcribeRecording: (recordingId) =>
+    request(
+      `/api/recordings/${encodeURIComponent(recordingId)}/transcribe`,
+      {
+        method: "POST",
+      }
+    ),
+
+  getRecordingTranscript: (recordingId) =>
+    request(
+      `/api/recordings/${encodeURIComponent(recordingId)}/transcript`
+    ),
+
 
   deleteRecording: (recordingId) =>
     request(`/api/recordings/${encodeURIComponent(recordingId)}`, {

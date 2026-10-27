@@ -28,6 +28,9 @@ export default function ModulesScreen() {
   const [description, setDescription] = useState("");
   const [lectureTitles, setLectureTitles] = useState({});
   const [lectureTopics, setLectureTopics] = useState({});
+  const [editingLectureId, setEditingLectureId] = useState(null);
+  const [editingLectureTitle, setEditingLectureTitle] = useState("");
+  const [editingLectureTopic, setEditingLectureTopic] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -142,6 +145,49 @@ export default function ModulesScreen() {
       setSaving(false);
     }
   }
+
+  function startEditingLecture(lecture) {
+  setEditingLectureId(lecture.id);
+  setEditingLectureTitle(lecture.title || "");
+  setEditingLectureTopic(lecture.topic || "");
+}
+
+function cancelEditingLecture() {
+  setEditingLectureId(null);
+  setEditingLectureTitle("");
+  setEditingLectureTopic("");
+}
+
+async function handleUpdateLecture(lecture) {
+  const title = editingLectureTitle.trim();
+  const topic = editingLectureTopic.trim();
+
+  if (!title) {
+    Alert.alert("Lecture title required", "Enter a title for the lecture.");
+    return;
+  }
+
+  try {
+    setSaving(true);
+
+    await api.updateLecture(lecture.id, {
+      title,
+      topic,
+    });
+
+    cancelEditingLecture();
+    await loadModules();
+
+    Alert.alert("Success", "Your lecture has been updated.");
+  } catch (err) {
+    Alert.alert(
+      "Could not update lecture",
+      err.message || "Please try again."
+    );
+  } finally {
+    setSaving(false);
+  }
+}
 
   function confirmDelete(module) {
     Alert.alert(
@@ -333,19 +379,80 @@ export default function ModulesScreen() {
               </Text>
             )}
 
-            {(lectures[module.id]?.items || []).map((lecture) => (
-              <View key={lecture.id} style={styles.lectureRow}>
-                <Text style={styles.lectureTitle}>
-                  {lecture.title || "Untitled lecture"}
-                </Text>
+            {(lectures[module.id]?.items || []).map((lecture) => {
+              const isEditing = editingLectureId === lecture.id;
 
-                {!!lecture.topic && (
-                  <Text style={styles.lectureTopic}>{lecture.topic}</Text>
-                )}
+              return (
+                <View key={lecture.id} style={styles.lectureRow}>
+                  {isEditing ? (
+                    <>
+                      <Text style={styles.label}>Edit lecture title *</Text>
 
-                <LectureRecordings lectureId={lecture.id} />
-              </View>
-            ))}
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Lecture title"
+                        value={editingLectureTitle}
+                        onChangeText={setEditingLectureTitle}
+                        editable={!saving}
+                      />
+
+                      <Text style={styles.label}>Edit topic (optional)</Text>
+
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Lecture topic"
+                        value={editingLectureTopic}
+                        onChangeText={setEditingLectureTopic}
+                        editable={!saving}
+                      />
+
+                      <View style={styles.lectureActions}>
+                        <TouchableOpacity
+                          style={[
+                            styles.editButton,
+                            saving && styles.disabled,
+                          ]}
+                          onPress={() => handleUpdateLecture(lecture)}
+                          disabled={saving}
+                        >
+                          <Text style={styles.editButtonText}>
+                            {saving ? "Saving..." : "Save Changes"}
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={styles.cancelButton}
+                          onPress={cancelEditingLecture}
+                          disabled={saving}
+                        >
+                          <Text style={styles.cancelButtonText}>Cancel</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.lectureTitle}>
+                        {lecture.title || "Untitled lecture"}
+                      </Text>
+
+                      {!!lecture.topic && (
+                        <Text style={styles.lectureTopic}>{lecture.topic}</Text>
+                      )}
+
+                      <TouchableOpacity
+                        style={styles.editLink}
+                        onPress={() => startEditingLecture(lecture)}
+                        disabled={saving}
+                      >
+                        <Text style={styles.editLinkText}>Edit Lecture</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+
+                  <LectureRecordings lectureId={lecture.id} />
+                </View>
+              );
+            })}
 
           </View>
         ))
@@ -470,4 +577,47 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   homeButtonText: { color: "#FFFFFF", fontWeight: "700" },
+  lectureActions: {
+  flexDirection: "row",
+  gap: 10,
+  marginTop: 8,
+},
+editButton: {
+  flex: 1,
+  backgroundColor: NAVY,
+  borderRadius: 8,
+  padding: 11,
+  alignItems: "center",
+},
+editButtonText: {
+  color: "#FFFFFF",
+  fontWeight: "700",
+},
+cancelButton: {
+  flex: 1,
+  backgroundColor: "#FFFFFF",
+  borderWidth: 1,
+  borderColor: "#D0D5DD",
+  borderRadius: 8,
+  padding: 11,
+  alignItems: "center",
+},
+cancelButtonText: {
+  color: "#344054",
+  fontWeight: "600",
+},
+editLink: {
+  alignSelf: "flex-start",
+  marginTop: 8,
+  marginBottom: 4,
+  paddingVertical: 5,
+  paddingHorizontal: 8,
+  borderRadius: 6,
+  backgroundColor: "#FFF4D6",
+},
+editLinkText: {
+  color: NAVY,
+  fontWeight: "700",
+  fontSize: 13,
+},
 });

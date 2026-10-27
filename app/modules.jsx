@@ -26,6 +26,10 @@ export default function ModulesScreen() {
   const [moduleName, setModuleName] = useState("");
   const [moduleCode, setModuleCode] = useState("");
   const [description, setDescription] = useState("");
+  const [editingModuleId, setEditingModuleId] = useState(null);
+  const [editingModuleName, setEditingModuleName] = useState("");
+  const [editingModuleCode, setEditingModuleCode] = useState("");
+  const [editingModuleDescription, setEditingModuleDescription] = useState("");
   const [lectureTitles, setLectureTitles] = useState({});
   const [lectureTopics, setLectureTopics] = useState({});
   const [editingLectureId, setEditingLectureId] = useState(null);
@@ -110,6 +114,52 @@ export default function ModulesScreen() {
       setSaving(false);
     }
   }
+
+  function startEditingModule(module) {
+    setEditingModuleId(module.id);
+    setEditingModuleName(module.name || "");
+    setEditingModuleCode(module.code || "");
+    setEditingModuleDescription(module.description || "");
+  }
+
+  function cancelEditingModule() {
+    setEditingModuleId(null);
+    setEditingModuleName("");
+    setEditingModuleCode("");
+    setEditingModuleDescription("");
+  }
+
+  async function handleUpdateModule(module) {
+    const name = editingModuleName.trim();
+
+    if (!name) {
+      Alert.alert("Module name required", "Enter a name for the module.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      await api.updateModule(module.id, {
+        name,
+        code: editingModuleCode.trim(),
+        description: editingModuleDescription.trim(),
+      });
+
+      cancelEditingModule();
+      await loadModules();
+
+      Alert.alert("Success", "Your module has been updated.");
+    } catch (err) {
+      Alert.alert(
+        "Could not update module",
+        err.message || "Please try again."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
 
   async function handleCreateLecture(module) {
     const title = (lectureTitles[module.id] || "").trim();

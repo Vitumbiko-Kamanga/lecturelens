@@ -31,7 +31,17 @@ function RootNavigator() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        animation: "slide_from_right",
+        animationDuration: 220,
+        gestureEnabled: true,
+        contentStyle: {
+          backgroundColor: "#F5F7FA",
+        },
+      }}
+    >
       {/* Screens available only to signed-in students */}
       <Stack.Protected guard={isSignedIn === true}>
         <Stack.Screen name="home" />

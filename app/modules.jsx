@@ -1,5 +1,5 @@
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -73,9 +73,7 @@ export default function ModulesScreen() {
 
       setLectures(Object.fromEntries(lectureResults));
 
-      setLectures(Object.fromEntries(lectureResults));
 
-      setLectures(Object.fromEntries(lectureResults));
     } catch (err) {
       setError(err.message || "Could not load your modules.");
     } finally {
@@ -404,27 +402,94 @@ function confirmDeleteLecture(lecture) {
             Create your first module using the form above.
           </Text>
         </View>
-      ) : (
-        modules.map((module) => (
+      ) : modules.map((module) => (
           <View key={module.id} style={styles.moduleCard}>
-            <View style={styles.moduleHeader}>
-              <View style={styles.moduleInfo}>
-                <Text style={styles.moduleName}>{module.name}</Text>
-                {!!module.code && (
-                  <Text style={styles.moduleCode}>{module.code}</Text>
-                )}
-                {!!module.description && (
-                  <Text style={styles.moduleDescription}>
-                    {module.description}
-                  </Text>
-                )}
+            {editingModuleId === module.id ? (
+              <View>
+                <Text style={styles.label}>Edit module name *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Module name"
+                  value={editingModuleName}
+                  onChangeText={setEditingModuleName}
+                  editable={!saving}
+                />
+
+                <Text style={styles.label}>Module code (optional)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Module code"
+                  value={editingModuleCode}
+                  onChangeText={setEditingModuleCode}
+                  autoCapitalize="characters"
+                  editable={!saving}
+                />
+
+                <Text style={styles.label}>Description (optional)</Text>
+                <TextInput
+                  style={[styles.input, styles.multiline]}
+                  placeholder="Module description"
+                  value={editingModuleDescription}
+                  onChangeText={setEditingModuleDescription}
+                  multiline
+                  editable={!saving}
+                />
+
+                <View style={styles.lectureActions}>
+                  <TouchableOpacity
+                    style={[styles.editButton, saving && styles.disabled]}
+                    onPress={() => handleUpdateModule(module)}
+                    disabled={saving}
+                  >
+                    <Text style={styles.editButtonText}>
+                      {saving ? "Saving..." : "Save Changes"}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={cancelEditingModule}
+                    disabled={saving}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              <TouchableOpacity onPress={() => confirmDelete(module)}>
-                <Text style={styles.deleteText}>Delete</Text>
-              </TouchableOpacity>
-            </View>
+            ) : (
+              <View style={styles.moduleHeader}>
+                <View style={styles.moduleInfo}>
+                  <Text style={styles.moduleName}>{module.name}</Text>
+
+                  {!!module.code && (
+                    <Text style={styles.moduleCode}>{module.code}</Text>
+                  )}
+
+                  {!!module.description && (
+                    <Text style={styles.moduleDescription}>
+                      {module.description}
+                    </Text>
+                  )}
+
+                  <TouchableOpacity
+                    style={styles.editLink}
+                    onPress={() => startEditingModule(module)}
+                    disabled={saving}
+                  >
+                    <Text style={styles.editLinkText}>Edit Module</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <TouchableOpacity
+                  onPress={() => confirmDelete(module)}
+                  disabled={saving}
+                >
+                  <Text style={styles.deleteText}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
             <View style={styles.divider} />
+
             <Text style={styles.label}>Add a lecture</Text>
 
             <TextInput
@@ -498,10 +563,7 @@ function confirmDeleteLecture(lecture) {
 
                       <View style={styles.lectureActions}>
                         <TouchableOpacity
-                          style={[
-                            styles.editButton,
-                            saving && styles.disabled,
-                          ]}
+                          style={[styles.editButton, saving && styles.disabled]}
                           onPress={() => handleUpdateLecture(lecture)}
                           disabled={saving}
                         >
@@ -543,7 +605,9 @@ function confirmDeleteLecture(lecture) {
                           onPress={() => confirmDeleteLecture(lecture)}
                           disabled={saving}
                         >
-                          <Text style={styles.deleteLectureText}>Delete Lecture</Text>
+                          <Text style={styles.deleteLectureText}>
+                            Delete Lecture
+                          </Text>
                         </TouchableOpacity>
                       </View>
                     </>
@@ -553,10 +617,9 @@ function confirmDeleteLecture(lecture) {
                 </View>
               );
             })}
-
           </View>
-        ))
-      )}
+        ))}
+
 
       <TouchableOpacity
         style={styles.homeButton}

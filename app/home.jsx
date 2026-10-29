@@ -18,6 +18,8 @@ import FloatingRecordButton from "../components/home/FloatingRecordButton";
 
 import styles from "../styles/homeStyles";
 
+const NAVY = "#12325B";
+
 export default function Home() {
   const { user, isLoaded } = useUser();
   const router = useRouter();
@@ -32,8 +34,11 @@ export default function Home() {
 
       <TouchableOpacity
         onPress={() => router.push("/modules")}
+        activeOpacity={0.75}
+        accessibilityRole="button"
+        accessibilityLabel="Manage modules and lectures"
         style={{
-          backgroundColor: "#12325B",
+          backgroundColor: NAVY,
           padding: 15,
           borderRadius: 12,
           marginHorizontal: 16,
@@ -54,7 +59,11 @@ export default function Home() {
 
       <ScrollView
         style={styles.container}
-        showsVerticalScrollIndicator={true}
+        contentContainerStyle={{ paddingBottom: 24 }}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+        overScrollMode="never"
+        keyboardShouldPersistTaps="handled"
       >
         <SearchBar />
         <QuickActions />

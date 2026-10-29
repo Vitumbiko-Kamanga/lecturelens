@@ -15,9 +15,10 @@ export default function QuickActions() {
 
       <View style={styles.actionsGrid}>
         <QuickActionCard
-          icon="mic"
-          title="Record"
-          color="#EF4444"
+          icon="folder-open"
+          title="Manage Modules"
+          color="#12325B"
+          onPress={() => router.push("/modules")}
         />
 
         <QuickActionCard

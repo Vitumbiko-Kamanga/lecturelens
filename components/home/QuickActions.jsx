@@ -1,6 +1,6 @@
 
 import React from "react";
-import { View, Text } from "react-native";
+import { View, Text, Alert } from "react-native";
 import { useRouter } from "expo-router";
 
 import QuickActionCard from "./QuickActionCard";
@@ -29,9 +29,15 @@ export default function QuickActions() {
         />
 
         <QuickActionCard
-          icon="reader"
-          title="Summaries"
-          color="#10B981"
+         icon="reader"
+         title="Summaries"
+         color="#10B981"
+         onPress={() =>
+            Alert.alert(
+            "Summaries",
+            "Lecture summaries are not available yet. This feature will be added in a future update."
+            )
+        }
         />
 
         <QuickActionCard

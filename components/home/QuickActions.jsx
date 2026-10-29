@@ -1,47 +1,44 @@
+
 import React from "react";
 import { View, Text } from "react-native";
+import { useRouter } from "expo-router";
 
 import QuickActionCard from "./QuickActionCard";
-
 import styles from "../../styles/homeStyles";
 
-export default function QuickActions(){
+export default function QuickActions() {
+  const router = useRouter();
 
-    return(
+  return (
+    <View>
+      <Text style={styles.sectionTitle}>Quick Actions</Text>
 
-        <View>
+      <View style={styles.actionsGrid}>
+        <QuickActionCard
+          icon="mic"
+          title="Record"
+          color="#EF4444"
+        />
 
-            <Text style={styles.sectionTitle}> Quick Actions </Text>
+        <QuickActionCard
+          icon="document-text"
+          title="My Notes"
+          color="#2563EB"
+          onPress={() => router.push("/notes")}
+        />
 
-            <View style={styles.actionsGrid}>
-                <QuickActionCard
-                    icon="mic"
-                    title="Record"
-                    color="#EF4444"
-                />
+        <QuickActionCard
+          icon="reader"
+          title="Summaries"
+          color="#10B981"
+        />
 
-                <QuickActionCard
-                    icon="document-text"
-                    title="My Notes"
-                    color="#2563EB"
-                />
-
-                <QuickActionCard
-                    icon="reader"
-                    title="Summaries"
-                    color="#10B981"
-                />
-
-                <QuickActionCard
-                    icon="sparkles"
-                    title="Ask AI"
-                    color="#8B5CF6"
-                />
-
-            </View>
-
-        </View>
-
-    );
-
+        <QuickActionCard
+          icon="sparkles"
+          title="Ask AI"
+          color="#8B5CF6"
+        />
+      </View>
+    </View>
+  );
 }

@@ -1,12 +1,10 @@
-
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  View,
+  ActivityIndicator,
+  Pressable,
   Text,
   TextInput,
-  FlatList,
-  Pressable,
-  ActivityIndicator,
+  View,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -22,7 +20,6 @@ function getItems(result, key) {
 
 export default function SearchBar() {
   const router = useRouter();
-
   const [query, setQuery] = useState("");
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -57,18 +54,15 @@ export default function SearchBar() {
               title: lecture.title || "Untitled lecture",
               moduleName: module.name || module.title || "Module",
               moduleId: module.id,
+              lectureId: lecture.id,
             }));
           })
         );
 
-        if (active) {
-          setItems([...moduleItems, ...lectureGroups.flat()]);
-        }
+        if (active) setItems([...moduleItems, ...lectureGroups.flat()]);
       } catch (err) {
         if (active) {
-          setError(
-            err?.message || "Could not load search results."
-          );
+          setError(err?.message || "Could not load search results.");
         }
       } finally {
         if (active) setLoading(false);
@@ -84,19 +78,16 @@ export default function SearchBar() {
 
   const results = useMemo(() => {
     const search = query.trim().toLowerCase();
-
     if (!search) return [];
 
     return items
       .filter((item) => {
-        const titleMatches = item.title
+        const titleMatches = (item.title || "")
           .toLowerCase()
           .includes(search);
-
-        const moduleMatches = item.moduleName
-          ?.toLowerCase()
+        const moduleMatches = (item.moduleName || "")
+          .toLowerCase()
           .includes(search);
-
         return titleMatches || moduleMatches;
       })
       .slice(0, 10);
@@ -104,17 +95,22 @@ export default function SearchBar() {
 
   function openResult(item) {
     setQuery("");
-    router.push("/modules");
+
+    router.push({
+      pathname: "/modules",
+      params: {
+        moduleId: String(item.moduleId),
+        ...(item.lectureId != null
+          ? { lectureId: String(item.lectureId) }
+          : {}),
+      },
+    });
   }
 
   return (
     <View style={{ marginHorizontal: 16, marginVertical: 12 }}>
       <View style={styles.searchSection}>
-        <Ionicons
-          name="search"
-          size={22}
-          color="#9CA3AF"
-        />
+        <Ionicons name="search" size={22} color="#9CA3AF" />
 
         <TextInput
           style={[styles.searchInput, { flex: 1 }]}
@@ -133,26 +129,17 @@ export default function SearchBar() {
             accessibilityRole="button"
             accessibilityLabel="Clear search"
           >
-            <Ionicons
-              name="close-circle"
-              size={20}
-              color="#64748B"
-            />
+            <Ionicons name="close-circle" size={20} color="#64748B" />
           </Pressable>
         )}
       </View>
 
       {loading && query.trim().length > 0 && (
-        <ActivityIndicator
-          style={{ marginTop: 12 }}
-          color="#12325B"
-        />
+        <ActivityIndicator style={{ marginTop: 12 }} color="#12325B" />
       )}
 
       {!!error && query.trim().length > 0 && (
-        <Text style={{ color: "#DC2626", marginTop: 8 }}>
-          {error}
-        </Text>
+        <Text style={{ color: "#DC2626", marginTop: 8 }}>{error}</Text>
       )}
 
       {!loading && !error && query.trim().length > 0 && (
@@ -167,53 +154,31 @@ export default function SearchBar() {
           }}
         >
           {results.length === 0 ? (
-            <Text
-              style={{
-                padding: 12,
-                color: "#64748B",
-              }}
-            >
+            <Text style={{ padding: 12, color: "#64748B" }}>
               No matching modules or lectures found.
             </Text>
           ) : (
-            <FlatList
-              data={results}
-              keyExtractor={(item) => item.id}
-              keyboardShouldPersistTaps="handled"
-              scrollEnabled={false}
-              renderItem={({ item }) => (
-                <Pressable
-                  onPress={() => openResult(item)}
-                  style={{
-                    padding: 12,
-                    borderBottomWidth: 1,
-                    borderBottomColor: "#E2E8F0",
-                  }}
+            results.map((item) => (
+              <Pressable
+                key={item.id}
+                onPress={() => openResult(item)}
+                style={{
+                  padding: 12,
+                  borderBottomWidth: 1,
+                  borderBottomColor: "#E2E8F0",
+                }}
+              >
+                <Text style={{ color: "#12325B", fontWeight: "600" }}>
+                  {item.title}
+                </Text>
+                <Text
+                  style={{ color: "#64748B", fontSize: 12, marginTop: 3 }}
                 >
-                  <Text
-                    style={{
-                      color: "#12325B",
-                      fontWeight: "600",
-                    }}
-                  >
-                    {item.title}
-                  </Text>
-
-                  <Text
-                    style={{
-                      color: "#64748B",
-                      fontSize: 12,
-                      marginTop: 3,
-                    }}
-                  >
-                    {item.type}
-                    {item.moduleName
-                      ? ` • ${item.moduleName}`
-                      : ""}
-                  </Text>
-                </Pressable>
-              )}
-            />
+                  {item.type}
+                  {item.moduleName ? ` • ${item.moduleName}` : ""}
+                </Text>
+              </Pressable>
+            ))
           )}
         </View>
       )}

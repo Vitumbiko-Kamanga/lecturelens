@@ -1,5 +1,5 @@
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useRouter, useFocusEffect } from "expo-router";
+import { useRouter, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { api } from "../services/api";
 import LectureRecordings from "../components/recordings/LectureRecordings";
 
@@ -20,6 +20,19 @@ const MUTED = "#667085";
 
 export default function ModulesScreen() {
   const router = useRouter();
+  const routeParams = useLocalSearchParams();
+  const selectedModuleId = Array.isArray(routeParams.moduleId)
+    ? routeParams.moduleId[0]
+    : routeParams.moduleId;
+  const selectedLectureId = Array.isArray(routeParams.lectureId)
+    ? routeParams.lectureId[0]
+    : routeParams.lectureId;
+  const scrollViewRef = useRef(null);
+  const hasScrolledToSelection = useRef(false);
+
+  useEffect(() => {
+    hasScrolledToSelection.current = false;
+  }, [selectedModuleId, selectedLectureId]);
 
   const [modules, setModules] = useState([]);
   const [lectures, setLectures] = useState({});
@@ -301,6 +314,7 @@ function confirmDeleteLecture(lecture) {
 
   return (
     <ScrollView
+      ref={scrollViewRef}
       style={styles.screen}
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
@@ -403,7 +417,31 @@ function confirmDeleteLecture(lecture) {
           </Text>
         </View>
       ) : modules.map((module) => (
-          <View key={module.id} style={styles.moduleCard}>
+          <View
+            key={module.id}
+            style={[
+              styles.moduleCard,
+              String(module.id) === String(selectedModuleId)
+                ? styles.highlightedModuleCard
+                : null,
+            ]}
+            onLayout={(event) => {
+              const isTargetModule =
+                selectedModuleId &&
+                String(module.id) === String(selectedModuleId);
+
+              if (isTargetModule && !hasScrolledToSelection.current) {
+                hasScrolledToSelection.current = true;
+                const y = event.nativeEvent.layout.y;
+                requestAnimationFrame(() => {
+                  scrollViewRef.current?.scrollTo({
+                    y: Math.max(0, y - 12),
+                    animated: true,
+                  });
+                });
+              }
+            }}
+          >
             {editingModuleId === module.id ? (
               <View>
                 <Text style={styles.label}>Edit module name *</Text>
@@ -538,7 +576,15 @@ function confirmDeleteLecture(lecture) {
               const isEditing = editingLectureId === lecture.id;
 
               return (
-                <View key={lecture.id} style={styles.lectureRow}>
+                <View
+                  key={lecture.id}
+                  style={[
+                    styles.lectureRow,
+                    String(lecture.id) === String(selectedLectureId)
+                      ? styles.highlightedLectureRow
+                      : null,
+                  ]}
+                >
                   {isEditing ? (
                     <>
                       <Text style={styles.label}>Edit lecture title *</Text>
@@ -706,6 +752,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5EAF0",
   },
+  highlightedModuleCard: {
+    borderColor: GOLD,
+    borderWidth: 2,
+    backgroundColor: "#FFFCF3",
+  },
   moduleHeader: { flexDirection: "row", justifyContent: "space-between" },
   moduleInfo: { flex: 1, paddingRight: 12 },
   moduleName: { color: NAVY, fontSize: 17, fontWeight: "700" },
@@ -729,6 +780,13 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 8,
     marginTop: 6,
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+  highlightedLectureRow: {
+    backgroundColor: "#FFF4D6",
+    borderColor: GOLD,
+    borderWidth: 2,
   },
   lectureTitle: { color: "#101828", fontWeight: "600" },
   lectureTopic: { color: MUTED, marginTop: 3, fontSize: 13 },

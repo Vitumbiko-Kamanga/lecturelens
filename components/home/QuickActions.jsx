@@ -41,9 +41,15 @@ export default function QuickActions() {
         />
 
         <QuickActionCard
-          icon="sparkles"
-          title="Ask AI"
-          color="#8B5CF6"
+         icon="sparkles"
+         title="Ask AI"
+         color="#8B5CF6"
+         onPress={() =>
+            Alert.alert(
+            "Ask AI",
+            "AI assistance is not available yet. This feature will be added in a future update."
+            )
+         }
         />
       </View>
     </View>

@@ -4,6 +4,7 @@ import {
   View,
   Text,
   TouchableOpacity,
+  Pressable,
   Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -16,8 +17,28 @@ export default function LectureCard({
   date,
   status,
   color = "#12325B",
+  moduleId,
+  lectureId,
 }) {
   const router = useRouter();
+
+  function handleOpenLecture() {
+    if (moduleId == null || lectureId == null) {
+      Alert.alert(
+        "Lecture unavailable",
+        "The module or lecture ID is missing. Please open it from Manage Modules."
+      );
+      return;
+    }
+
+    router.push({
+      pathname: "/modules",
+      params: {
+        moduleId: String(moduleId),
+        lectureId: String(lectureId),
+      },
+    });
+  }
 
   function handleSummary() {
     Alert.alert(
@@ -27,39 +48,70 @@ export default function LectureCard({
   }
 
   function handleNotes() {
-    router.push("/notes");
-  }
+    if (moduleId == null || lectureId == null) {
+        Alert.alert(
+        "Notes unavailable",
+        "The module or lecture information is missing."
+        );
+        return;
+    }
+
+    router.push({
+        pathname: "/notes",
+        params: {
+        moduleId: String(moduleId),
+        lectureId: String(lectureId),
+        },
+    });
+   }
 
   return (
     <View style={styles.lectureCard}>
-      <View style={styles.cardHeader}>
-        <View style={{ flex: 1, marginRight: 12 }}>
-          <Text style={styles.lectureTitle}>
-            {title}
-          </Text>
+      <Pressable
+        onPress={handleOpenLecture}
+        accessibilityRole="button"
+        accessibilityLabel={`Open ${title}`}
+        accessibilityHint="Opens the module containing this lecture"
+      >
+        <View style={styles.cardHeader}>
+          <View style={{ flex: 1, marginRight: 12 }}>
+            <Text style={styles.lectureTitle}>
+              {title}
+            </Text>
 
-          <Text style={styles.lectureDate}>
-            {date}
+            <Text style={styles.lectureDate}>
+              {date}
+            </Text>
+          </View>
+
+          <Ionicons
+            name="book"
+            size={26}
+            color="#12325B"
+          />
+        </View>
+
+        <View
+          style={[
+            styles.statusBadge,
+            { backgroundColor: color },
+          ]}
+        >
+          <Text style={styles.statusText}>
+            {status}
           </Text>
         </View>
 
-        <Ionicons
-          name="book"
-          size={26}
-          color="#12325B"
-        />
-      </View>
-
-      <View
-        style={[
-          styles.statusBadge,
-          { backgroundColor: color },
-        ]}
-      >
-        <Text style={styles.statusText}>
-          {status}
+        <Text
+          style={{
+            color: "#64748B",
+            fontSize: 12,
+            marginTop: 8,
+          }}
+        >
+          Tap to open this lecture
         </Text>
-      </View>
+      </Pressable>
 
       <View style={styles.buttonRow}>
         <TouchableOpacity

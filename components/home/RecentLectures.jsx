@@ -23,6 +23,16 @@ function getItems(result, key) {
   return [];
 }
 
+function getLectureTimestamp(lecture) {
+  const value = lecture.lecture_date || lecture.created_at;
+
+  if (!value) return 0;
+
+  const timestamp = new Date(value).getTime();
+
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
 function formatLectureDate(value) {
   if (!value) return "Date unavailable";
 
@@ -48,17 +58,6 @@ function formatLectureDate(value) {
   return date.toLocaleDateString();
 }
 
-function getLectureTimestamp(lecture) {
-  const value =
-    lecture.lecture_date || lecture.created_at;
-
-  if (!value) return 0;
-
-  const timestamp = new Date(value).getTime();
-
-  return Number.isNaN(timestamp) ? 0 : timestamp;
-}
-
 export default function RecentLectures() {
   const [lectures, setLectures] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -79,14 +78,13 @@ export default function RecentLectures() {
           const lectureGroups = await Promise.all(
             modules.map(async (module) => {
               const result = await api.listLectures(module.id);
-              const moduleLectures = getItems(
-                result,
-                "lectures"
-              );
+              const moduleLectures = getItems(result, "lectures");
 
               return moduleLectures.map((lecture) => ({
                 ...lecture,
-                moduleName: module.name,
+                moduleId: module.id,
+                moduleName:
+                  module.name || module.title || "Untitled module",
               }));
             })
           );
@@ -134,10 +132,8 @@ export default function RecentLectures() {
 
       {loading && (
         <View style={{ paddingVertical: 20 }}>
-          <ActivityIndicator
-            size="small"
-            color="#12325B"
-          />
+          <ActivityIndicator size="small" color="#12325B" />
+
           <Text
             style={{
               textAlign: "center",
@@ -168,8 +164,8 @@ export default function RecentLectures() {
             marginVertical: 12,
           }}
         >
-          No lectures yet. Create a module and add your
-          first lecture to see it here.
+          No lectures yet. Create a module and add your first
+          lecture to see it here.
         </Text>
       )}
 
@@ -179,14 +175,16 @@ export default function RecentLectures() {
           <LectureCard
             key={
               lecture.id ??
-              `${lecture.module_id ?? "module"}-${index}`
+              `${lecture.moduleId ?? "module"}-${index}`
             }
             title={lecture.title || "Untitled lecture"}
             date={formatLectureDate(
               lecture.lecture_date || lecture.created_at
             )}
-            status={lecture.topic || "Lecture saved"}
+            status={lecture.moduleName}
             color="#12325B"
+            moduleId={lecture.moduleId}
+            lectureId={lecture.id}
           />
         ))}
     </View>

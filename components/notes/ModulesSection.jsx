@@ -1,5 +1,10 @@
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -20,7 +25,10 @@ function getItems(result, key) {
   return [];
 }
 
-export default function ModulesSection() {
+export default function ModulesSection({
+  initialModuleId,
+  initialLectureId,
+}) {
   const [modules, setModules] = useState([]);
   const [expandedModule, setExpandedModule] = useState(null);
   const [lecturesByModule, setLecturesByModule] = useState({});
@@ -39,14 +47,19 @@ export default function ModulesSection() {
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState("");
+
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [editingNoteId, setEditingNoteId] = useState(null);
+
   const [loading, setLoading] = useState(true);
   const [lecturesLoading, setLecturesLoading] = useState(false);
   const [notesLoading, setNotesLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  // Prevent the same route selection from running repeatedly.
+  const handledSelectionRef = useRef(null);
 
   const loadModules = useCallback(async () => {
     try {
@@ -64,22 +77,143 @@ export default function ModulesSection() {
     loadModules();
   }, [loadModules]);
 
+  const openLecture = useCallback(async (lecture) => {
+    setSelectedLecture(lecture);
+    setNotes([]);
+    setRecordings([]);
+    setTranscriptsByRecording({});
+    setExpandedTranscriptId(null);
+    setTranscriptErrors({});
+    setTranscriptSearch("");
+    setNotesLoading(true);
+    setRecordingsLoading(true);
+    setError("");
+    setRecordingsError("");
+    setSearchSubmitted("");
+    setSearchResults([]);
+    setSearchError("");
+
+    // Load notes independently.
+    try {
+      const result = await api.listNotes(lecture.id);
+      setNotes(getItems(result, "notes"));
+    } catch (err) {
+      setError(err.message || "Could not load notes.");
+    } finally {
+      setNotesLoading(false);
+    }
+
+    // Load recordings independently.
+    try {
+      const result = await api.listRecordings(lecture.id);
+      setRecordings(getItems(result, "recordings"));
+    } catch (err) {
+      setRecordingsError(
+        err.message || "Could not load lecture recordings."
+      );
+    } finally {
+      setRecordingsLoading(false);
+    }
+  }, []);
+
+  // Automatically open the lecture requested by the Home screen.
+  useEffect(() => {
+    if (
+      initialModuleId == null ||
+      initialLectureId == null ||
+      modules.length === 0
+    ) {
+      return;
+    }
+
+    const selectionKey = `${initialModuleId}:${initialLectureId}`;
+
+    if (handledSelectionRef.current === selectionKey) {
+      return;
+    }
+
+    let active = true;
+
+    async function selectRequestedLecture() {
+      const targetModule = modules.find(
+        (module) => String(module.id) === String(initialModuleId)
+      );
+
+      if (!targetModule) {
+        setError("The selected module could not be found.");
+        return;
+      }
+
+      try {
+        setError("");
+        setExpandedModule(targetModule.id);
+        setLecturesLoading(true);
+
+        const result = await api.listLectures(targetModule.id);
+        const moduleLectures = getItems(result, "lectures");
+
+        if (!active) return;
+
+        setLecturesByModule((previous) => ({
+          ...previous,
+          [targetModule.id]: moduleLectures,
+        }));
+
+        const targetLecture = moduleLectures.find(
+          (lecture) => String(lecture.id) === String(initialLectureId)
+        );
+
+        if (!targetLecture) {
+          setError("The selected lecture could not be found in this module.");
+          return;
+        }
+
+        // Mark it before opening to prevent duplicate requests.
+        handledSelectionRef.current = selectionKey;
+
+        await openLecture(targetLecture);
+      } catch (err) {
+        if (active) {
+          setError(err.message || "Could not open the selected lecture.");
+        }
+      } finally {
+        if (active) {
+          setLecturesLoading(false);
+        }
+      }
+    }
+
+    selectRequestedLecture();
+
+    return () => {
+      active = false;
+    };
+  }, [
+    modules,
+    initialModuleId,
+    initialLectureId,
+    openLecture,
+  ]);
+
   async function toggleModule(module) {
     if (expandedModule === module.id) {
       setExpandedModule(null);
       setSelectedLecture(null);
       setNotes([]);
+      setRecordings([]);
       return;
     }
 
     setExpandedModule(module.id);
     setSelectedLecture(null);
     setNotes([]);
+    setRecordings([]);
     setLecturesLoading(true);
     setError("");
 
     try {
       const result = await api.listLectures(module.id);
+
       setLecturesByModule((previous) => ({
         ...previous,
         [module.id]: getItems(result, "lectures"),
@@ -90,132 +224,109 @@ export default function ModulesSection() {
       setLecturesLoading(false);
     }
   }
-async function openLecture(lecture) {
-  setSelectedLecture(lecture);
-  setNotes([]);
-  setRecordings([]);
-  setTranscriptSearch("");
-  setExpandedTranscriptId(null);
-  setNotesLoading(true);
-  setRecordingsLoading(true);
-  setError("");
-  setRecordingsError("");
-  setTranscriptSearch("");
-  setSearchSubmitted("");
-  setSearchResults([]);
-  setSearchError("");
 
-  // Load notes without preventing recordings from loading if notes fail.
-  try {
-    const result = await api.listNotes(lecture.id);
-    setNotes(getItems(result, "notes"));
-  } catch (err) {
-    setError(err.message || "Could not load notes.");
-  } finally {
-    setNotesLoading(false);
-  }
+  async function toggleTranscript(recording) {
+    const recordingId = recording.id;
 
-  // Load recordings belonging to this lecture.
-  try {
-    const result = await api.listRecordings(lecture.id);
-    setRecordings(getItems(result, "recordings"));
-  } catch (err) {
-    setRecordingsError(
-      err.message || "Could not load lecture recordings."
-    );
-  } finally {
-    setRecordingsLoading(false);
-  }
-}
-
-
-async function toggleTranscript(recording) {
-  const recordingId = recording.id;
-
-  // Close the transcript if it is already open.
-  if (expandedTranscriptId === recordingId) {
-    setExpandedTranscriptId(null);
-    return;
-  }
-
-  // Reopen a transcript already fetched during this session.
-  if (transcriptsByRecording[recordingId]) {
-    setExpandedTranscriptId(recordingId);
-    return;
-  }
-
-  setTranscriptLoadingId(recordingId);
-  setTranscriptErrors((previous) => {
-    const next = { ...previous };
-    delete next[recordingId];
-    return next;
-  });
-
-  try {
-    const result = await api.getRecordingTranscript(recordingId);
-    const savedTranscript = result?.transcript;
-
-    if (!savedTranscript) {
-      throw new Error("The transcript response was empty.");
+    if (expandedTranscriptId === recordingId) {
+      setExpandedTranscriptId(null);
+      return;
     }
 
-    setTranscriptsByRecording((previous) => ({
-      ...previous,
-      [recordingId]: savedTranscript,
-    }));
+    if (transcriptsByRecording[recordingId]) {
+      setExpandedTranscriptId(recordingId);
+      return;
+    }
 
-    setExpandedTranscriptId(recordingId);
-  } catch (err) {
-    setTranscriptErrors((previous) => ({
-      ...previous,
-      [recordingId]:
-        err.message || "Could not load this transcript.",
-    }));
-  } finally {
-    setTranscriptLoadingId(null);
+    setTranscriptLoadingId(recordingId);
+
+    setTranscriptErrors((previous) => {
+      const next = { ...previous };
+      delete next[recordingId];
+      return next;
+    });
+
+    try {
+      const result = await api.getRecordingTranscript(recordingId);
+      const savedTranscript = result?.transcript;
+
+      if (!savedTranscript) {
+        throw new Error("The transcript response was empty.");
+      }
+
+      setTranscriptsByRecording((previous) => ({
+        ...previous,
+        [recordingId]: savedTranscript,
+      }));
+
+      setExpandedTranscriptId(recordingId);
+    } catch (err) {
+      setTranscriptErrors((previous) => ({
+        ...previous,
+        [recordingId]:
+          err.message || "Could not load this transcript.",
+      }));
+    } finally {
+      setTranscriptLoadingId(null);
+    }
   }
-}
-const handleTranscriptSearch = async () => {
-  const term = transcriptSearch.trim().toLowerCase();
 
-  setSearchSubmitted(term);
-  setSearchResults([]);
-  setSearchError("");
+  const handleTranscriptSearch = async () => {
+    const term = transcriptSearch.trim().toLowerCase();
 
-  if (!term) {
-    setSearchError("Please enter a word or phrase to search.");
-    return;
-  }
+    setSearchSubmitted(term);
+    setSearchResults([]);
+    setSearchError("");
 
-  if (recordings.length === 0) {
-    setSearchError("There are no recordings to search for this lecture.");
-    return;
-  }
+    if (!term) {
+      setSearchError("Please enter a word or phrase to search.");
+      return;
+    }
 
-  setSearchLoading(true);
+    if (recordings.length === 0) {
+      setSearchError("There are no recordings to search for this lecture.");
+      return;
+    }
 
-  try {
-    const results = [];
-    const updatedTranscripts = {};
+    setSearchLoading(true);
 
-    for (const recording of recordings) {
-      try {
-        const response = await api.getRecordingTranscript(recording.id);
-        const transcript = response?.transcript;
+    try {
+      const results = [];
+      const updatedTranscripts = {};
 
-        if (!transcript) {
-          continue;
-        }
+      for (const recording of recordings) {
+        try {
+          const response = await api.getRecordingTranscript(recording.id);
+          const transcript = response?.transcript;
 
-        updatedTranscripts[recording.id] = transcript;
+          if (!transcript) continue;
 
-        const segments = Array.isArray(transcript.segments)
-          ? transcript.segments
-          : [];
+          updatedTranscripts[recording.id] = transcript;
 
-        if (segments.length > 0) {
-          segments.forEach((segment, index) => {
-            const text = String(segment.text || "");
+          const segments = Array.isArray(transcript.segments)
+            ? transcript.segments
+            : [];
+
+          if (segments.length > 0) {
+            segments.forEach((segment, index) => {
+              const text = String(segment.text || "");
+
+              if (text.toLowerCase().includes(term)) {
+                results.push({
+                  recordingId: recording.id,
+                  recordingTitle:
+                    recording.title ||
+                    recording.original_filename ||
+                    "Lecture recording",
+                  start: segment.start,
+                  end: segment.end,
+                  text,
+                  key: `${recording.id}-${index}`,
+                });
+              }
+            });
+          } else {
+            const text = String(transcript.transcript || "");
 
             if (text.toLowerCase().includes(term)) {
               results.push({
@@ -224,71 +335,57 @@ const handleTranscriptSearch = async () => {
                   recording.title ||
                   recording.original_filename ||
                   "Lecture recording",
-                start: segment.start,
-                end: segment.end,
                 text,
-                key: `${recording.id}-${index}`,
+                key: `${recording.id}-full`,
               });
             }
-          });
-        } else {
-          const text = String(transcript.transcript || "");
-
-          if (text.toLowerCase().includes(term)) {
-            results.push({
-              recordingId: recording.id,
-              recordingTitle:
-                recording.title ||
-                recording.original_filename ||
-                "Lecture recording",
-              text,
-              key: `${recording.id}-full`,
-            });
           }
+        } catch (err) {
+          console.log(
+            `Could not search transcript for recording ${recording.id}:`,
+            err.message
+          );
         }
-      } catch (error) {
-        // A missing transcript for one recording should not
-        // prevent the other recordings from being searched.
-        console.log(
-          `Could not search transcript for recording ${recording.id}:`,
-          error.message
+      }
+
+      setTranscriptsByRecording((previous) => ({
+        ...previous,
+        ...updatedTranscripts,
+      }));
+
+      setSearchResults(results);
+
+      if (results.length === 0) {
+        setSearchError(
+          `No matches found for "${transcriptSearch.trim()}".`
         );
       }
-    }
-
-    setTranscriptsByRecording((previous) => ({
-      ...previous,
-      ...updatedTranscripts,
-    }));
-
-    setSearchResults(results);
-
-    if (results.length === 0) {
+    } catch (err) {
       setSearchError(
-        `No matches found for "${transcriptSearch.trim()}".`
+        err.message || "Unable to search saved transcripts."
       );
+    } finally {
+      setSearchLoading(false);
     }
-  } catch (error) {
-    setSearchError(
-      error.message || "Unable to search saved transcripts."
+  };
+
+  function formatTimestamp(seconds) {
+    const totalSeconds = Math.max(
+      0,
+      Math.floor(Number(seconds) || 0)
     );
-  } finally {
-    setSearchLoading(false);
+    const minutes = Math.floor(totalSeconds / 60);
+    const remainingSeconds = totalSeconds % 60;
+
+    return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
   }
-};
 
-function formatTimestamp(seconds) {
-  const totalSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
-  const minutes = Math.floor(totalSeconds / 60);
-  const remainingSeconds = totalSeconds % 60;
-
-  return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
-}
-
- 
   async function saveNote() {
     if (!selectedLecture) {
-      Alert.alert("Select a lecture", "Choose a lecture before saving a note.");
+      Alert.alert(
+        "Select a lecture",
+        "Choose a lecture before saving a note."
+      );
       return;
     }
 
@@ -318,7 +415,9 @@ function formatTimestamp(seconds) {
 
         setNotes((previous) =>
           previous.map((note) =>
-            note.id === updatedNote.id ? updatedNote : note
+            String(note.id) === String(updatedNote.id)
+              ? updatedNote
+              : note
           )
         );
 
@@ -361,7 +460,6 @@ function formatTimestamp(seconds) {
     setTitle("");
     setContent("");
   }
-
 
   function confirmDelete(note) {
     Alert.alert("Delete note?", "This action cannot be undone.", [
@@ -425,14 +523,19 @@ function formatTimestamp(seconds) {
               >
                 <View style={{ flex: 1 }}>
                   <Text style={styles.moduleTitle}>{module.name}</Text>
+
                   {!!module.code && (
                     <Text style={styles.muted}>{module.code}</Text>
                   )}
+
                   <Text style={styles.muted}>
                     {isExpanded ? "Tap to collapse" : "Tap to view lectures"}
                   </Text>
                 </View>
-                <Text style={styles.chevron}>{isExpanded ? "−" : "+"}</Text>
+
+                <Text style={styles.chevron}>
+                  {isExpanded ? "−" : "+"}
+                </Text>
               </TouchableOpacity>
 
               {isExpanded && (
@@ -451,15 +554,16 @@ function formatTimestamp(seconds) {
                         onPress={() => openLecture(lecture)}
                         style={[
                           styles.lectureButton,
-                          selectedLecture?.id === lecture.id &&
+                          String(selectedLecture?.id) === String(lecture.id) &&
                             styles.selectedLecture,
                         ]}
                       >
                         <Text style={styles.lectureTitle}>
                           {lecture.title || "Untitled lecture"}
                         </Text>
+
                         <Text style={styles.muted}>
-                          {selectedLecture?.id === lecture.id
+                          {String(selectedLecture?.id) === String(lecture.id)
                             ? "Selected"
                             : "View notes"}
                         </Text>
@@ -483,6 +587,7 @@ function formatTimestamp(seconds) {
           <Text style={styles.muted}>{selectedLecture.title}</Text>
 
           <Text style={styles.panelTitle}>Recordings & transcripts</Text>
+
           <TextInput
             style={styles.input}
             placeholder="Search saved transcripts..."
@@ -510,46 +615,42 @@ function formatTimestamp(seconds) {
             )}
           </TouchableOpacity>
 
-            {searchLoading && (
-              <Text style={styles.muted}>
-                Searching saved transcripts...
+          {searchLoading && (
+            <Text style={styles.muted}>
+              Searching saved transcripts...
+            </Text>
+          )}
+
+          {!!searchError && (
+            <Text style={styles.error}>{searchError}</Text>
+          )}
+
+          {searchSubmitted !== "" && searchResults.length > 0 && (
+            <View style={styles.transcriptContent}>
+              <Text style={styles.recordingTitle}>
+                {searchResults.length} matching segment
+                {searchResults.length === 1 ? "" : "s"}
               </Text>
-            )}
 
-            {!!searchError && (
-              <Text style={styles.error}>
-                {searchError}
-              </Text>
-            )}
+              {searchResults.map((result) => (
+                <View key={result.key} style={styles.transcriptSegment}>
+                  <Text style={styles.recordingTitle}>
+                    {result.recordingTitle}
+                  </Text>
 
-            {searchSubmitted !== "" && searchResults.length > 0 && (
-              <View style={styles.transcriptContent}>
-                <Text style={styles.recordingTitle}>
-                  {searchResults.length} matching segment
-                  {searchResults.length === 1 ? "" : "s"}
-                </Text>
-
-                {searchResults.map((result) => (
-                  <View key={result.key} style={styles.transcriptSegment}>
-                    <Text style={styles.recordingTitle}>
-                      {result.recordingTitle}
+                  {result.start !== undefined && (
+                    <Text style={styles.timestamp}>
+                      {formatTimestamp(result.start)}
+                      {result.end !== undefined &&
+                        ` – ${formatTimestamp(result.end)}`}
                     </Text>
+                  )}
 
-                    {result.start !== undefined && (
-                      <Text style={styles.timestamp}>
-                        {formatTimestamp(result.start)}
-                        {result.end !== undefined &&
-                          ` – ${formatTimestamp(result.end)}`}
-                      </Text>
-                    )}
-
-                    <Text style={styles.transcriptText}>
-                      {result.text}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
+                  <Text style={styles.transcriptText}>{result.text}</Text>
+                </View>
+              ))}
+            </View>
+          )}
 
           {recordingsLoading ? (
             <ActivityIndicator color={NAVY} />
@@ -567,15 +668,19 @@ function formatTimestamp(seconds) {
                 transcriptsByRecording[recording.id];
               const transcriptError =
                 transcriptErrors[recording.id];
+
               const segments = Array.isArray(savedTranscript?.segments)
                 ? savedTranscript.segments
                 : [];
+
               const searchTerm = transcriptSearch.trim().toLowerCase();
+
               const filteredSegments = segments.filter((segment) =>
                 String(segment.text || "")
                   .toLowerCase()
                   .includes(searchTerm)
               );
+
               return (
                 <View key={recording.id} style={styles.recordingCard}>
                   <Text style={styles.recordingTitle}>
@@ -635,7 +740,8 @@ function formatTimestamp(seconds) {
                               style={styles.transcriptSegment}
                             >
                               <Text style={styles.timestamp}>
-                                {formatTimestamp(segment.start)} – {formatTimestamp(segment.end)}
+                                {formatTimestamp(segment.start)} –{" "}
+                                {formatTimestamp(segment.end)}
                               </Text>
 
                               <Text style={styles.transcriptText}>
@@ -650,7 +756,8 @@ function formatTimestamp(seconds) {
                         )
                       ) : (
                         <Text style={styles.transcriptText}>
-                          {savedTranscript.transcript || "This transcript has no text."}
+                          {savedTranscript.transcript ||
+                            "This transcript has no text."}
                         </Text>
                       )}
                     </View>
@@ -683,7 +790,7 @@ function formatTimestamp(seconds) {
             disabled={saving}
             style={[styles.saveButton, saving && { opacity: 0.6 }]}
           >
-                        <Text style={styles.saveButtonText}>
+            <Text style={styles.saveButtonText}>
               {saving
                 ? editingNoteId !== null
                   ? "Updating..."
@@ -694,7 +801,7 @@ function formatTimestamp(seconds) {
             </Text>
           </TouchableOpacity>
 
-                    {editingNoteId !== null && (
+          {editingNoteId !== null && (
             <TouchableOpacity
               onPress={cancelEdit}
               disabled={saving}
@@ -711,12 +818,16 @@ function formatTimestamp(seconds) {
             </TouchableOpacity>
           )}
 
-          <Text style={styles.panelTitle}>Saved notes ({notes.length})</Text>
+          <Text style={styles.panelTitle}>
+            Saved notes ({notes.length})
+          </Text>
 
           {notesLoading ? (
             <ActivityIndicator color={NAVY} />
           ) : notes.length === 0 ? (
-            <Text style={styles.emptyText}>No notes saved for this lecture.</Text>
+            <Text style={styles.emptyText}>
+              No notes saved for this lecture.
+            </Text>
           ) : (
             notes.map((note) => (
               <View key={note.id} style={styles.noteCard}>
@@ -724,13 +835,21 @@ function formatTimestamp(seconds) {
                   <Text style={styles.noteTitle}>
                     {note.title || "Untitled note"}
                   </Text>
+
                   <Text style={styles.noteContent}>
                     {note.content || "No content"}
                   </Text>
                 </View>
-                                <View style={{ alignItems: "flex-end", gap: 12 }}>
+
+                <View style={{ alignItems: "flex-end", gap: 12 }}>
                   <TouchableOpacity onPress={() => editNote(note)}>
-                    <Text style={{ color: NAVY, fontWeight: "700", fontSize: 12 }}>
+                    <Text
+                      style={{
+                        color: NAVY,
+                        fontWeight: "700",
+                        fontSize: 12,
+                      }}
+                    >
                       Edit
                     </Text>
                   </TouchableOpacity>
@@ -762,10 +881,26 @@ const styles = {
     alignItems: "center",
     padding: 15,
   },
-  moduleTitle: { color: NAVY, fontSize: 16, fontWeight: "700" },
-  muted: { color: MUTED, fontSize: 12, marginTop: 5 },
-  chevron: { color: NAVY, fontSize: 25, fontWeight: "600", paddingLeft: 12 },
-  inner: { paddingHorizontal: 12, paddingBottom: 12 },
+  moduleTitle: {
+    color: NAVY,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  muted: {
+    color: MUTED,
+    fontSize: 12,
+    marginTop: 5,
+  },
+  chevron: {
+    color: NAVY,
+    fontSize: 25,
+    fontWeight: "600",
+    paddingLeft: 12,
+  },
+  inner: {
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+  },
   lectureButton: {
     backgroundColor: "#F5F7FA",
     borderRadius: 8,
@@ -778,7 +913,11 @@ const styles = {
     borderColor: GOLD,
     backgroundColor: "#FFF9E9",
   },
-  lectureTitle: { color: "#101828", fontSize: 14, fontWeight: "600" },
+  lectureTitle: {
+    color: "#101828",
+    fontSize: 14,
+    fontWeight: "600",
+  },
   empty: {
     padding: 18,
     backgroundColor: "#FFFFFF",
@@ -786,9 +925,21 @@ const styles = {
     alignItems: "center",
     marginBottom: 12,
   },
-  emptyTitle: { color: NAVY, fontSize: 16, fontWeight: "700" },
-  emptyText: { color: MUTED, fontSize: 13, lineHeight: 20, marginTop: 6 },
-  error: { color: "#B42318", marginVertical: 10 },
+  emptyTitle: {
+    color: NAVY,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  emptyText: {
+    color: MUTED,
+    fontSize: 13,
+    lineHeight: 20,
+    marginTop: 6,
+  },
+  error: {
+    color: "#B42318",
+    marginVertical: 10,
+  },
   retryButton: {
     padding: 10,
     borderWidth: 1,
@@ -796,7 +947,10 @@ const styles = {
     borderRadius: 8,
     marginTop: 10,
   },
-  retryText: { color: NAVY, fontWeight: "600" },
+  retryText: {
+    color: NAVY,
+    fontWeight: "600",
+  },
   notesPanel: {
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
@@ -827,7 +981,9 @@ const styles = {
     color: "#101828",
     fontSize: 14,
   },
-  textArea: { minHeight: 110 },
+  textArea: {
+    minHeight: 110,
+  },
   saveButton: {
     backgroundColor: NAVY,
     padding: 13,
@@ -836,7 +992,10 @@ const styles = {
     marginTop: 12,
     marginBottom: 18,
   },
-  saveButtonText: { color: "#FFFFFF", fontWeight: "700" },
+  saveButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
   noteCard: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -846,14 +1005,22 @@ const styles = {
     borderRadius: 8,
     marginTop: 8,
   },
-  noteTitle: { color: NAVY, fontSize: 14, fontWeight: "700" },
+  noteTitle: {
+    color: NAVY,
+    fontSize: 14,
+    fontWeight: "700",
+  },
   noteContent: {
     color: "#344054",
     fontSize: 13,
     lineHeight: 19,
     marginTop: 5,
   },
-  deleteText: { color: "#B42318", fontWeight: "600", fontSize: 12 },
+  deleteText: {
+    color: "#B42318",
+    fontWeight: "600",
+    fontSize: 12,
+  },
   recordingCard: {
     backgroundColor: "#F5F7FA",
     borderRadius: 9,
@@ -902,5 +1069,4 @@ const styles = {
     fontSize: 14,
     lineHeight: 22,
   },
-
 };

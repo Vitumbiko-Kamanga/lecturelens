@@ -8,6 +8,7 @@ import React, {
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Text,
   TextInput,
   TouchableOpacity,
@@ -18,6 +19,15 @@ import { api } from "../../services/api";
 const NAVY = "#12325B";
 const GOLD = "#F2B544";
 const MUTED = "#667085";
+
+const RESOURCE_TYPES = [
+  "book",
+  "article",
+  "website",
+  "paper",
+  "video",
+  "other",
+];
 
 function getItems(result, key) {
   if (Array.isArray(result)) return result;
@@ -37,6 +47,16 @@ export default function ModulesSection({
   const [recordings, setRecordings] = useState([]);
   const [recordingsLoading, setRecordingsLoading] = useState(false);
   const [recordingsError, setRecordingsError] = useState("");
+
+  // Module resources
+  const [resourcesByModule, setResourcesByModule] = useState({});
+  const [resourcesLoading, setResourcesLoading] = useState({});
+  const [resourcesError, setResourcesError] = useState({});
+  const [resourceTitle, setResourceTitle] = useState("");
+  const [resourceAuthor, setResourceAuthor] = useState("");
+  const [resourceUrl, setResourceUrl] = useState("");
+  const [resourceType, setResourceType] = useState("book");
+  const [resourceSaving, setResourceSaving] = useState(false);
 
   const [transcriptsByRecording, setTranscriptsByRecording] = useState({});
   const [expandedTranscriptId, setExpandedTranscriptId] = useState(null);
@@ -58,7 +78,6 @@ export default function ModulesSection({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  // Prevent the same route selection from running repeatedly.
   const handledSelectionRef = useRef(null);
 
   const loadModules = useCallback(async () => {
@@ -77,6 +96,38 @@ export default function ModulesSection({
     loadModules();
   }, [loadModules]);
 
+  // Load resources belonging to one module.
+  const loadModuleResources = useCallback(async (moduleId) => {
+    setResourcesLoading((previous) => ({
+      ...previous,
+      [moduleId]: true,
+    }));
+
+    setResourcesError((previous) => ({
+      ...previous,
+      [moduleId]: "",
+    }));
+
+    try {
+      const result = await api.listResources(moduleId);
+
+      setResourcesByModule((previous) => ({
+        ...previous,
+        [moduleId]: getItems(result, "resources"),
+      }));
+    } catch (err) {
+      setResourcesError((previous) => ({
+        ...previous,
+        [moduleId]: err.message || "Could not load learning resources.",
+      }));
+    } finally {
+      setResourcesLoading((previous) => ({
+        ...previous,
+        [moduleId]: false,
+      }));
+    }
+  }, []);
+
   const openLecture = useCallback(async (lecture) => {
     setSelectedLecture(lecture);
     setNotes([]);
@@ -93,7 +144,6 @@ export default function ModulesSection({
     setSearchResults([]);
     setSearchError("");
 
-    // Load notes independently.
     try {
       const result = await api.listNotes(lecture.id);
       setNotes(getItems(result, "notes"));
@@ -103,7 +153,6 @@ export default function ModulesSection({
       setNotesLoading(false);
     }
 
-    // Load recordings independently.
     try {
       const result = await api.listRecordings(lecture.id);
       setRecordings(getItems(result, "recordings"));
@@ -149,8 +198,12 @@ export default function ModulesSection({
         setExpandedModule(targetModule.id);
         setLecturesLoading(true);
 
-        const result = await api.listLectures(targetModule.id);
-        const moduleLectures = getItems(result, "lectures");
+        const [lectureResult] = await Promise.all([
+          api.listLectures(targetModule.id),
+          loadModuleResources(targetModule.id),
+        ]);
+
+        const moduleLectures = getItems(lectureResult, "lectures");
 
         if (!active) return;
 
@@ -168,9 +221,7 @@ export default function ModulesSection({
           return;
         }
 
-        // Mark it before opening to prevent duplicate requests.
         handledSelectionRef.current = selectionKey;
-
         await openLecture(targetLecture);
       } catch (err) {
         if (active) {
@@ -193,6 +244,7 @@ export default function ModulesSection({
     initialModuleId,
     initialLectureId,
     openLecture,
+    loadModuleResources,
   ]);
 
   async function toggleModule(module) {
@@ -212,17 +264,138 @@ export default function ModulesSection({
     setError("");
 
     try {
-      const result = await api.listLectures(module.id);
+      const [lectureResult] = await Promise.all([
+        api.listLectures(module.id),
+        loadModuleResources(module.id),
+      ]);
 
       setLecturesByModule((previous) => ({
         ...previous,
-        [module.id]: getItems(result, "lectures"),
+        [module.id]: getItems(lectureResult, "lectures"),
       }));
     } catch (err) {
       setError(err.message || "Could not load lectures.");
     } finally {
       setLecturesLoading(false);
     }
+  }
+
+  // Add a resource to the currently expanded module.
+  async function saveResource(moduleId) {
+    if (!resourceTitle.trim()) {
+      Alert.alert("Resource title required", "Enter the resource title.");
+      return;
+    }
+
+    const cleanUrl = resourceUrl.trim();
+
+    if (
+      cleanUrl &&
+      !/^https?:\/\/\S+$/i.test(cleanUrl)
+    ) {
+      Alert.alert(
+        "Invalid URL",
+        "Enter a valid link beginning with https:// or http://."
+      );
+      return;
+    }
+
+    setResourceSaving(true);
+
+    try {
+      const resourceData = {
+        title: resourceTitle.trim(),
+        author: resourceAuthor.trim(),
+        url: cleanUrl,
+        resource_type: resourceType,
+      };
+
+      const result = await api.createResource(moduleId, resourceData);
+      const savedResource = result?.resource || result;
+
+      if (savedResource?.id) {
+        setResourcesByModule((previous) => ({
+          ...previous,
+          [moduleId]: [
+            savedResource,
+            ...(previous[moduleId] || []),
+          ],
+        }));
+      } else {
+        await loadModuleResources(moduleId);
+      }
+
+      setResourceTitle("");
+      setResourceAuthor("");
+      setResourceUrl("");
+      setResourceType("book");
+
+      Alert.alert("Resource saved", "Your learning resource has been saved.");
+    } catch (err) {
+      Alert.alert(
+        "Could not save resource",
+        err.message || "Please try again."
+      );
+    } finally {
+      setResourceSaving(false);
+    }
+  }
+
+  async function openResource(resource) {
+    if (!resource.url) {
+      Alert.alert(
+        "No link available",
+        "This resource does not have a URL saved."
+      );
+      return;
+    }
+
+    try {
+      const supported = await Linking.canOpenURL(resource.url);
+
+      if (!supported) {
+        Alert.alert("Cannot open link", "This URL cannot be opened.");
+        return;
+      }
+
+      await Linking.openURL(resource.url);
+    } catch (err) {
+      Alert.alert(
+        "Could not open resource",
+        err.message || "Please check the saved URL."
+      );
+    }
+  }
+
+  function confirmDeleteResource(moduleId, resource) {
+    Alert.alert(
+      "Delete resource?",
+      `Are you sure you want to delete "${resource.title}"?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await api.deleteResource(resource.id);
+
+              setResourcesByModule((previous) => ({
+                ...previous,
+                [moduleId]: (previous[moduleId] || []).filter(
+                  (item) => String(item.id) !== String(resource.id)
+                ),
+              }));
+            } catch (err) {
+              Alert.alert(
+                "Could not delete resource",
+                err.message || "Please try again."
+              );
+            }
+          },
+        },
+      ]
+    );
   }
 
   async function toggleTranscript(recording) {
@@ -514,6 +687,7 @@ export default function ModulesSection({
         modules.map((module) => {
           const isExpanded = expandedModule === module.id;
           const moduleLectures = lecturesByModule[module.id] || [];
+          const moduleResources = resourcesByModule[module.id] || [];
 
           return (
             <View key={module.id} style={styles.card}>
@@ -529,7 +703,7 @@ export default function ModulesSection({
                   )}
 
                   <Text style={styles.muted}>
-                    {isExpanded ? "Tap to collapse" : "Tap to view lectures"}
+                    {isExpanded ? "Tap to collapse" : "Tap to view lectures and resources"}
                   </Text>
                 </View>
 
@@ -540,6 +714,8 @@ export default function ModulesSection({
 
               {isExpanded && (
                 <View style={styles.inner}>
+                  <Text style={styles.sectionTitle}>Lectures</Text>
+
                   {lecturesLoading ? (
                     <ActivityIndicator color={NAVY} />
                   ) : moduleLectures.length === 0 ? (
@@ -570,6 +746,148 @@ export default function ModulesSection({
                       </TouchableOpacity>
                     ))
                   )}
+
+                  {/* Learning resources for this module */}
+                  <View style={styles.resourceSection}>
+                    <Text style={styles.sectionTitle}>Learning Resources</Text>
+                    <Text style={styles.emptyText}>
+                      Save books, articles, websites and other study materials
+                      for this module.
+                    </Text>
+
+                    {resourcesLoading[module.id] ? (
+                      <ActivityIndicator
+                        color={NAVY}
+                        style={{ marginVertical: 12 }}
+                      />
+                    ) : resourcesError[module.id] ? (
+                      <View>
+                        <Text style={styles.error}>
+                          {resourcesError[module.id]}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => loadModuleResources(module.id)}
+                          style={styles.retryButton}
+                        >
+                          <Text style={styles.retryText}>Retry loading resources</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : moduleResources.length === 0 ? (
+                      <Text style={styles.emptyText}>
+                        No learning resources saved for this module yet.
+                      </Text>
+                    ) : (
+                      moduleResources.map((resource) => (
+                        <View key={resource.id} style={styles.resourceCard}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.resourceTitle}>
+                              {resource.title}
+                            </Text>
+
+                            {!!resource.author && (
+                              <Text style={styles.muted}>
+                                Author: {resource.author}
+                              </Text>
+                            )}
+
+                            <Text style={styles.resourceType}>
+                              {(resource.resource_type || "other").toUpperCase()}
+                            </Text>
+
+                            {!!resource.url && (
+                              <TouchableOpacity
+                                onPress={() => openResource(resource)}
+                                style={styles.openResourceButton}
+                              >
+                                <Text style={styles.openResourceText}>
+                                  Open resource
+                                </Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+
+                          <TouchableOpacity
+                            onPress={() =>
+                              confirmDeleteResource(module.id, resource)
+                            }
+                            style={styles.resourceDeleteButton}
+                          >
+                            <Text style={styles.deleteText}>Delete</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))
+                    )}
+
+                    <Text style={styles.label}>Resource title *</Text>
+                    <TextInput
+                      value={resourceTitle}
+                      onChangeText={setResourceTitle}
+                      placeholder="e.g. Introduction to Database Systems"
+                      style={styles.input}
+                    />
+
+                    <Text style={styles.label}>Author (optional)</Text>
+                    <TextInput
+                      value={resourceAuthor}
+                      onChangeText={setResourceAuthor}
+                      placeholder="Enter author or publisher"
+                      style={styles.input}
+                    />
+
+                    <Text style={styles.label}>Resource URL (optional)</Text>
+                    <TextInput
+                      value={resourceUrl}
+                      onChangeText={setResourceUrl}
+                      placeholder="https://example.com"
+                      autoCapitalize="none"
+                      keyboardType="url"
+                      style={styles.input}
+                    />
+
+                    <Text style={styles.label}>Resource type</Text>
+                    <View style={styles.resourceTypes}>
+                      {RESOURCE_TYPES.map((type) => (
+                        <TouchableOpacity
+                          key={type}
+                          onPress={() => setResourceType(type)}
+                          style={[
+                            styles.resourceTypeOption,
+                            resourceType === type &&
+                              styles.resourceTypeSelected,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.resourceTypeOptionText,
+                              resourceType === type &&
+                                styles.resourceTypeSelectedText,
+                            ]}
+                          >
+                            {type === "paper"
+                              ? "Research paper"
+                              : type.charAt(0).toUpperCase() + type.slice(1)}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+
+                    <TouchableOpacity
+                      onPress={() => saveResource(module.id)}
+                      disabled={resourceSaving}
+                      style={[
+                        styles.resourceSaveButton,
+                        resourceSaving && { opacity: 0.6 },
+                      ]}
+                    >
+                      {resourceSaving ? (
+                        <ActivityIndicator color="#FFFFFF" />
+                      ) : (
+                        <Text style={styles.resourceSaveButtonText}>
+                          Save Learning Resource
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )}
             </View>
@@ -901,6 +1219,13 @@ const styles = {
     paddingHorizontal: 12,
     paddingBottom: 12,
   },
+  sectionTitle: {
+    color: NAVY,
+    fontSize: 15,
+    fontWeight: "800",
+    marginTop: 12,
+    marginBottom: 6,
+  },
   lectureButton: {
     backgroundColor: "#F5F7FA",
     borderRadius: 8,
@@ -946,10 +1271,94 @@ const styles = {
     borderColor: NAVY,
     borderRadius: 8,
     marginTop: 10,
+    alignSelf: "flex-start",
   },
   retryText: {
     color: NAVY,
     fontWeight: "600",
+  },
+  resourceSection: {
+    marginTop: 18,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#E5EAF0",
+  },
+  resourceCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    padding: 12,
+    backgroundColor: "#F5F7FA",
+    borderRadius: 8,
+    marginTop: 9,
+    borderWidth: 1,
+    borderColor: "#E5EAF0",
+  },
+  resourceTitle: {
+    color: NAVY,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  resourceType: {
+    color: MUTED,
+    fontSize: 10,
+    fontWeight: "700",
+    marginTop: 7,
+  },
+  openResourceButton: {
+    alignSelf: "flex-start",
+    backgroundColor: "#FFF9E9",
+    borderWidth: 1,
+    borderColor: GOLD,
+    borderRadius: 7,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginTop: 8,
+  },
+  openResourceText: {
+    color: NAVY,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  resourceDeleteButton: {
+    padding: 5,
+  },
+  resourceTypes: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
+  },
+  resourceTypeOption: {
+    borderWidth: 1,
+    borderColor: "#D0D5DD",
+    borderRadius: 20,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    backgroundColor: "#FFFFFF",
+  },
+  resourceTypeSelected: {
+    backgroundColor: "#FFF9E9",
+    borderColor: GOLD,
+  },
+  resourceTypeOptionText: {
+    color: "#344054",
+    fontSize: 12,
+  },
+  resourceTypeSelectedText: {
+    color: NAVY,
+    fontWeight: "700",
+  },
+  resourceSaveButton: {
+    backgroundColor: NAVY,
+    borderRadius: 8,
+    padding: 13,
+    alignItems: "center",
+    marginTop: 14,
+  },
+  resourceSaveButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 13,
   },
   notesPanel: {
     backgroundColor: "#FFFFFF",

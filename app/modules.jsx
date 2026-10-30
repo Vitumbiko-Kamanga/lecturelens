@@ -1,5 +1,11 @@
+﻿
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -10,7 +16,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useRouter, useFocusEffect, useLocalSearchParams } from "expo-router";
+
+import {
+  useRouter,
+  useFocusEffect,
+  useLocalSearchParams,
+} from "expo-router";
+
 import { api } from "../services/api";
 import LectureRecordings from "../components/recordings/LectureRecordings";
 
@@ -21,48 +33,63 @@ const MUTED = "#667085";
 export default function ModulesScreen() {
   const router = useRouter();
   const routeParams = useLocalSearchParams();
+
   const selectedModuleId = Array.isArray(routeParams.moduleId)
     ? routeParams.moduleId[0]
     : routeParams.moduleId;
+
   const selectedLectureId = Array.isArray(routeParams.lectureId)
     ? routeParams.lectureId[0]
     : routeParams.lectureId;
+
   const scrollViewRef = useRef(null);
   const hasScrolledToSelection = useRef(false);
+
+  const [modules, setModules] = useState([]);
+  const [lectures, setLectures] = useState({});
+
+  const [moduleName, setModuleName] = useState("");
+  const [moduleCode, setModuleCode] = useState("");
+  const [description, setDescription] = useState("");
+
+  const [editingModuleId, setEditingModuleId] = useState(null);
+  const [editingModuleName, setEditingModuleName] = useState("");
+  const [editingModuleCode, setEditingModuleCode] = useState("");
+  const [editingModuleDescription, setEditingModuleDescription] = useState("");
+
+  const [lectureTitles, setLectureTitles] = useState({});
+  const [lectureTopics, setLectureTopics] = useState({});
+
+  const [editingLectureId, setEditingLectureId] = useState(null);
+  const [editingLectureTitle, setEditingLectureTitle] = useState("");
+  const [editingLectureTopic, setEditingLectureTopic] = useState("");
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     hasScrolledToSelection.current = false;
   }, [selectedModuleId, selectedLectureId]);
 
-  const [modules, setModules] = useState([]);
-  const [lectures, setLectures] = useState({});
-  const [moduleName, setModuleName] = useState("");
-  const [moduleCode, setModuleCode] = useState("");
-  const [description, setDescription] = useState("");
-  const [editingModuleId, setEditingModuleId] = useState(null);
-  const [editingModuleName, setEditingModuleName] = useState("");
-  const [editingModuleCode, setEditingModuleCode] = useState("");
-  const [editingModuleDescription, setEditingModuleDescription] = useState("");
-  const [lectureTitles, setLectureTitles] = useState({});
-  const [lectureTopics, setLectureTopics] = useState({});
-  const [editingLectureId, setEditingLectureId] = useState(null);
-  const [editingLectureTitle, setEditingLectureTitle] = useState("");
-  const [editingLectureTopic, setEditingLectureTopic] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-
+  // LOAD MODULES AND THEIR LECTURES
   const loadModules = useCallback(async () => {
     try {
       setError("");
+
       const result = await api.listModules();
-      const items = Array.isArray(result) ? result : result?.modules || [];
+
+      const items = Array.isArray(result)
+        ? result
+        : result?.modules || [];
+
       setModules(items);
 
       const lectureResults = await Promise.all(
         items.map(async (module) => {
           try {
             const result = await api.listLectures(module.id);
+
             return [
               module.id,
               {
@@ -86,7 +113,6 @@ export default function ModulesScreen() {
 
       setLectures(Object.fromEntries(lectureResults));
 
-
     } catch (err) {
       setError(err.message || "Could not load your modules.");
     } finally {
@@ -100,6 +126,7 @@ export default function ModulesScreen() {
     }, [loadModules])
   );
 
+  // CREATE MODULE
   async function handleCreateModule() {
     if (!moduleName.trim()) {
       Alert.alert("Module name required", "Enter the name of your module.");
@@ -108,6 +135,7 @@ export default function ModulesScreen() {
 
     try {
       setSaving(true);
+
       await api.createModule({
         name: moduleName.trim(),
         code: moduleCode.trim(),
@@ -117,8 +145,11 @@ export default function ModulesScreen() {
       setModuleName("");
       setModuleCode("");
       setDescription("");
+
       await loadModules();
+
       Alert.alert("Success", "Your module has been created.");
+
     } catch (err) {
       Alert.alert("Could not create module", err.message);
     } finally {
@@ -126,6 +157,7 @@ export default function ModulesScreen() {
     }
   }
 
+  // EDIT MODULE
   function startEditingModule(module) {
     setEditingModuleId(module.id);
     setEditingModuleName(module.name || "");
@@ -158,9 +190,11 @@ export default function ModulesScreen() {
       });
 
       cancelEditingModule();
+
       await loadModules();
 
       Alert.alert("Success", "Your module has been updated.");
+
     } catch (err) {
       Alert.alert(
         "Could not update module",
@@ -171,7 +205,48 @@ export default function ModulesScreen() {
     }
   }
 
+  // DELETE MODULE
+  function confirmDelete(module) {
+    Alert.alert(
+      "Delete module?",
+      `Are you sure you want to delete "${module.name}"? This may also affect associated lectures, notes and recordings.`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setSaving(true);
 
+              await api.deleteModule(module.id);
+
+              if (editingModuleId === module.id) {
+                cancelEditingModule();
+              }
+
+              await loadModules();
+
+              Alert.alert("Success", "Your module has been deleted.");
+
+            } catch (err) {
+              Alert.alert(
+                "Could not delete module",
+                err.message || "Please try again."
+              );
+            } finally {
+              setSaving(false);
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  // CREATE LECTURE
   async function handleCreateLecture(module) {
     const title = (lectureTitles[module.id] || "").trim();
     const topic = (lectureTopics[module.id] || "").trim();
@@ -183,6 +258,7 @@ export default function ModulesScreen() {
 
     try {
       setSaving(true);
+
       await api.createLecture(module.id, {
         title,
         topic,
@@ -193,13 +269,16 @@ export default function ModulesScreen() {
         ...previous,
         [module.id]: "",
       }));
+
       setLectureTopics((previous) => ({
         ...previous,
         [module.id]: "",
       }));
 
       await loadModules();
+
       Alert.alert("Success", "Your lecture has been saved.");
+
     } catch (err) {
       Alert.alert("Could not create lecture", err.message);
     } finally {
@@ -207,111 +286,96 @@ export default function ModulesScreen() {
     }
   }
 
+  // EDIT LECTURE
   function startEditingLecture(lecture) {
-  setEditingLectureId(lecture.id);
-  setEditingLectureTitle(lecture.title || "");
-  setEditingLectureTopic(lecture.topic || "");
-}
-
-function cancelEditingLecture() {
-  setEditingLectureId(null);
-  setEditingLectureTitle("");
-  setEditingLectureTopic("");
-}
-
-async function handleUpdateLecture(lecture) {
-  const title = editingLectureTitle.trim();
-  const topic = editingLectureTopic.trim();
-
-  if (!title) {
-    Alert.alert("Lecture title required", "Enter a title for the lecture.");
-    return;
+    setEditingLectureId(lecture.id);
+    setEditingLectureTitle(lecture.title || "");
+    setEditingLectureTopic(lecture.topic || "");
   }
 
-  try {
-    setSaving(true);
-
-    await api.updateLecture(lecture.id, {
-      title,
-      topic,
-    });
-
-    cancelEditingLecture();
-    await loadModules();
-
-    Alert.alert("Success", "Your lecture has been updated.");
-  } catch (err) {
-    Alert.alert(
-      "Could not update lecture",
-      err.message || "Please try again."
-    );
-  } finally {
-    setSaving(false);
+  function cancelEditingLecture() {
+    setEditingLectureId(null);
+    setEditingLectureTitle("");
+    setEditingLectureTopic("");
   }
-}
 
-async function handleDeleteLecture(lecture) {
-  try {
-    setSaving(true);
+  async function handleUpdateLecture(lecture) {
+    const title = editingLectureTitle.trim();
+    const topic = editingLectureTopic.trim();
 
-    await api.deleteLecture(lecture.id);
-
-    if (editingLectureId === lecture.id) {
-      cancelEditingLecture();
+    if (!title) {
+      Alert.alert("Lecture title required", "Enter a title for the lecture.");
+      return;
     }
 
-    await loadModules();
+    try {
+      setSaving(true);
 
-    Alert.alert("Success", "The lecture has been deleted.");
-  } catch (err) {
-    Alert.alert(
-      "Could not delete lecture",
-      err.message || "Please try again."
-    );
-  } finally {
-    setSaving(false);
+      await api.updateLecture(lecture.id, {
+        title,
+        topic,
+      });
+
+      cancelEditingLecture();
+
+      await loadModules();
+
+      Alert.alert("Success", "Your lecture has been updated.");
+
+    } catch (err) {
+      Alert.alert(
+        "Could not update lecture",
+        err.message || "Please try again."
+      );
+    } finally {
+      setSaving(false);
+    }
   }
-}
 
-function confirmDeleteLecture(lecture) {
-  Alert.alert(
-    "Delete lecture?",
-    `Are you sure you want to delete "${lecture.title || "Untitled lecture"}"? This action may affect associated notes and recordings.`,
-    [
-      {
-        text: "Cancel",
-        style: "cancel",
-      },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: () => handleDeleteLecture(lecture),
-      },
-    ]
-  );
-}
-  function confirmDelete(module) {
+  // DELETE LECTURE
+  async function handleDeleteLecture(lecture) {
+    try {
+      setSaving(true);
+
+      await api.deleteLecture(lecture.id);
+
+      if (editingLectureId === lecture.id) {
+        cancelEditingLecture();
+      }
+
+      await loadModules();
+
+      Alert.alert("Success", "The lecture has been deleted.");
+
+    } catch (err) {
+      Alert.alert(
+        "Could not delete lecture",
+        err.message || "Please try again."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function confirmDeleteLecture(lecture) {
     Alert.alert(
-      "Delete module?",
-      `Delete "${module.name}"? This may also affect its associated lectures.`,
+      "Delete lecture?",
+      `Are you sure you want to delete "${lecture.title || "Untitled lecture"}"? This may affect associated notes and recordings.`,
       [
-        { text: "Cancel", style: "cancel" },
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
         {
           text: "Delete",
           style: "destructive",
-          onPress: async () => {
-            try {
-              await api.deleteModule(module.id);
-              await loadModules();
-            } catch (err) {
-              Alert.alert("Could not delete module", err.message);
-            }
-          },
+          onPress: () => handleDeleteLecture(lecture),
         },
       ]
     );
   }
 
+  // RENDER SCREEN
   return (
     <ScrollView
       ref={scrollViewRef}
@@ -319,43 +383,53 @@ function confirmDeleteLecture(lecture) {
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
     >
+      {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Text style={styles.back}>‹ Back</Text>
         </TouchableOpacity>
+
         <Text style={styles.heading}>My Modules</Text>
+
         <Text style={styles.subtitle}>
           Organise your courses and save lectures for each module.
         </Text>
       </View>
 
+      {/* CREATE MODULE FORM */}
       <View style={styles.form}>
         <Text style={styles.sectionTitle}>Create a module</Text>
 
         <Text style={styles.label}>Module name *</Text>
+
         <TextInput
           style={styles.input}
           placeholder="e.g. Database Administration"
           value={moduleName}
           onChangeText={setModuleName}
+          editable={!saving}
         />
 
         <Text style={styles.label}>Module code (optional)</Text>
+
         <TextInput
           style={styles.input}
           placeholder="e.g. BIT 420"
           value={moduleCode}
           onChangeText={setModuleCode}
           autoCapitalize="characters"
+          editable={!saving}
         />
 
         <Text style={styles.label}>Description (optional)</Text>
+
         <TextInput
           style={[styles.input, styles.multiline]}
           placeholder="Brief module description"
           value={description}
           onChangeText={setDescription}
           multiline
+          editable={!saving}
         />
 
         <TouchableOpacity
@@ -369,54 +443,51 @@ function confirmDeleteLecture(lecture) {
         </TouchableOpacity>
       </View>
 
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 14,
-        }}
-      >
-        <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>
+      {/* MODULE LIST HEADER */}
+      <View style={styles.listHeader}>
+        <Text style={[styles.sectionTitle, styles.noBottomMargin]}>
           Your modules
         </Text>
 
         <TouchableOpacity
           onPress={loadModules}
           disabled={loading || saving}
-          style={{
-            backgroundColor: "#FFF4D6",
-            borderWidth: 1,
-            borderColor: GOLD,
-            borderRadius: 8,
-            paddingHorizontal: 12,
-            paddingVertical: 8,
-            opacity: loading || saving ? 0.6 : 1,
-          }}
+          style={[
+            styles.refreshButton,
+            (loading || saving) && styles.disabled,
+          ]}
         >
-          <Text style={{ color: NAVY, fontWeight: "700" }}>
-            Refresh
-          </Text>
+          <Text style={styles.refreshText}>Refresh</Text>
         </TouchableOpacity>
-</View>
+      </View>
 
+      {/* LOADING, ERROR AND EMPTY STATES */}
       {loading ? (
         <ActivityIndicator size="large" color={NAVY} />
+
       ) : error ? (
         <View style={styles.empty}>
           <Text style={styles.error}>{error}</Text>
-          <TouchableOpacity style={styles.outlineButton} onPress={loadModules}>
+
+          <TouchableOpacity
+            style={styles.outlineButton}
+            onPress={loadModules}
+          >
             <Text style={styles.outlineText}>Try again</Text>
           </TouchableOpacity>
         </View>
+
       ) : modules.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>No modules yet</Text>
+
           <Text style={styles.emptyText}>
             Create your first module using the form above.
           </Text>
         </View>
-      ) : modules.map((module) => (
+
+      ) : (
+        modules.map((module) => (
           <View
             key={module.id}
             style={[
@@ -432,7 +503,9 @@ function confirmDeleteLecture(lecture) {
 
               if (isTargetModule && !hasScrolledToSelection.current) {
                 hasScrolledToSelection.current = true;
+
                 const y = event.nativeEvent.layout.y;
+
                 requestAnimationFrame(() => {
                   scrollViewRef.current?.scrollTo({
                     y: Math.max(0, y - 12),
@@ -442,9 +515,11 @@ function confirmDeleteLecture(lecture) {
               }
             }}
           >
+            {/* MODULE EDIT FORM */}
             {editingModuleId === module.id ? (
               <View>
                 <Text style={styles.label}>Edit module name *</Text>
+
                 <TextInput
                   style={styles.input}
                   placeholder="Module name"
@@ -454,6 +529,7 @@ function confirmDeleteLecture(lecture) {
                 />
 
                 <Text style={styles.label}>Module code (optional)</Text>
+
                 <TextInput
                   style={styles.input}
                   placeholder="Module code"
@@ -464,6 +540,7 @@ function confirmDeleteLecture(lecture) {
                 />
 
                 <Text style={styles.label}>Description (optional)</Text>
+
                 <TextInput
                   style={[styles.input, styles.multiline]}
                   placeholder="Module description"
@@ -493,7 +570,9 @@ function confirmDeleteLecture(lecture) {
                   </TouchableOpacity>
                 </View>
               </View>
+
             ) : (
+              /* MODULE DETAILS */
               <View style={styles.moduleHeader}>
                 <View style={styles.moduleInfo}>
                   <Text style={styles.moduleName}>{module.name}</Text>
@@ -528,6 +607,7 @@ function confirmDeleteLecture(lecture) {
 
             <View style={styles.divider} />
 
+            {/* ADD LECTURE */}
             <Text style={styles.label}>Add a lecture</Text>
 
             <TextInput
@@ -540,6 +620,7 @@ function confirmDeleteLecture(lecture) {
                   [module.id]: value,
                 }))
               }
+              editable={!saving}
             />
 
             <TextInput
@@ -552,6 +633,7 @@ function confirmDeleteLecture(lecture) {
                   [module.id]: value,
                 }))
               }
+              editable={!saving}
             />
 
             <TouchableOpacity
@@ -559,19 +641,24 @@ function confirmDeleteLecture(lecture) {
               onPress={() => handleCreateLecture(module)}
               disabled={saving}
             >
-              <Text style={styles.secondaryButtonText}>+ Save Lecture</Text>
+              <Text style={styles.secondaryButtonText}>
+                {saving ? "Please wait..." : "+ Save Lecture"}
+              </Text>
             </TouchableOpacity>
 
+            {/* LECTURE COUNT */}
             <Text style={styles.lectureCount}>
               {(lectures[module.id]?.items || []).length} saved lecture(s)
             </Text>
 
             {!!lectures[module.id]?.error && (
               <Text style={styles.error}>
-                Could not load this module's lectures: {lectures[module.id].error}
+                Could not load this module's lectures:{" "}
+                {lectures[module.id].error}
               </Text>
             )}
 
+            {/* LECTURE LIST */}
             {(lectures[module.id]?.items || []).map((lecture) => {
               const isEditing = editingLectureId === lecture.id;
 
@@ -627,6 +714,7 @@ function confirmDeleteLecture(lecture) {
                         </TouchableOpacity>
                       </View>
                     </>
+
                   ) : (
                     <>
                       <Text style={styles.lectureTitle}>
@@ -634,7 +722,9 @@ function confirmDeleteLecture(lecture) {
                       </Text>
 
                       {!!lecture.topic && (
-                        <Text style={styles.lectureTopic}>{lecture.topic}</Text>
+                        <Text style={styles.lectureTopic}>
+                          {lecture.topic}
+                        </Text>
                       )}
 
                       <View style={styles.lectureActions}>
@@ -643,7 +733,9 @@ function confirmDeleteLecture(lecture) {
                           onPress={() => startEditingLecture(lecture)}
                           disabled={saving}
                         >
-                          <Text style={styles.editLinkText}>Edit Lecture</Text>
+                          <Text style={styles.editLinkText}>
+                            Edit Lecture
+                          </Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
@@ -664,9 +756,10 @@ function confirmDeleteLecture(lecture) {
               );
             })}
           </View>
-        ))}
+        ))
+      )}
 
-
+      {/* RETURN HOME */}
       <TouchableOpacity
         style={styles.homeButton}
         onPress={() => router.replace("/home")}
@@ -678,12 +771,41 @@ function confirmDeleteLecture(lecture) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#F5F7FA" },
-  content: { padding: 20, paddingBottom: 40 },
-  header: { marginBottom: 22, marginTop: 12 },
-  back: { color: NAVY, fontSize: 16, marginBottom: 16, fontWeight: "600" },
-  heading: { fontSize: 28, fontWeight: "800", color: NAVY },
-  subtitle: { fontSize: 14, color: MUTED, marginTop: 7, lineHeight: 21 },
+  screen: {
+    flex: 1,
+    backgroundColor: "#F5F7FA",
+  },
+
+  content: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+
+  header: {
+    marginBottom: 22,
+    marginTop: 12,
+  },
+
+  back: {
+    color: NAVY,
+    fontSize: 16,
+    marginBottom: 16,
+    fontWeight: "600",
+  },
+
+  heading: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: NAVY,
+  },
+
+  subtitle: {
+    fontSize: 14,
+    color: MUTED,
+    marginTop: 7,
+    lineHeight: 21,
+  },
+
   form: {
     backgroundColor: "#FFFFFF",
     borderRadius: 14,
@@ -692,12 +814,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5EAF0",
   },
+
   sectionTitle: {
     fontSize: 19,
     fontWeight: "700",
     color: NAVY,
     marginBottom: 14,
   },
+
+  noBottomMargin: {
+    marginBottom: 0,
+  },
+
   label: {
     fontSize: 13,
     fontWeight: "600",
@@ -705,6 +833,7 @@ const styles = StyleSheet.create({
     marginBottom: 7,
     marginTop: 9,
   },
+
   input: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
@@ -716,7 +845,12 @@ const styles = StyleSheet.create({
     color: "#101828",
     marginBottom: 5,
   },
-  multiline: { minHeight: 70, textAlignVertical: "top" },
+
+  multiline: {
+    minHeight: 70,
+    textAlignVertical: "top",
+  },
+
   primaryButton: {
     backgroundColor: NAVY,
     padding: 14,
@@ -724,8 +858,38 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 14,
   },
-  primaryButtonText: { color: "#FFFFFF", fontWeight: "700", fontSize: 15 },
-  disabled: { opacity: 0.6 },
+
+  primaryButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 15,
+  },
+
+  disabled: {
+    opacity: 0.6,
+  },
+
+  listHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+
+  refreshButton: {
+    backgroundColor: "#FFF4D6",
+    borderWidth: 1,
+    borderColor: GOLD,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+
+  refreshText: {
+    color: NAVY,
+    fontWeight: "700",
+  },
+
   empty: {
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
@@ -733,9 +897,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 15,
   },
-  emptyTitle: { color: NAVY, fontSize: 17, fontWeight: "700" },
-  emptyText: { color: MUTED, marginTop: 7, textAlign: "center" },
-  error: { color: "#B42318", textAlign: "center", marginBottom: 12 },
+
+  emptyTitle: {
+    color: NAVY,
+    fontSize: 17,
+    fontWeight: "700",
+  },
+
+  emptyText: {
+    color: MUTED,
+    marginTop: 7,
+    textAlign: "center",
+  },
+
+  error: {
+    color: "#B42318",
+    textAlign: "center",
+    marginBottom: 12,
+  },
+
   outlineButton: {
     borderWidth: 1,
     borderColor: NAVY,
@@ -743,7 +923,12 @@ const styles = StyleSheet.create({
     padding: 10,
     marginTop: 12,
   },
-  outlineText: { color: NAVY, fontWeight: "600" },
+
+  outlineText: {
+    color: NAVY,
+    fontWeight: "600",
+  },
+
   moduleCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 14,
@@ -752,18 +937,53 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5EAF0",
   },
+
   highlightedModuleCard: {
     borderColor: GOLD,
     borderWidth: 2,
     backgroundColor: "#FFFCF3",
   },
-  moduleHeader: { flexDirection: "row", justifyContent: "space-between" },
-  moduleInfo: { flex: 1, paddingRight: 12 },
-  moduleName: { color: NAVY, fontSize: 17, fontWeight: "700" },
-  moduleCode: { color: MUTED, marginTop: 4, fontSize: 13 },
-  moduleDescription: { color: MUTED, marginTop: 5, lineHeight: 19 },
-  deleteText: { color: "#B42318", fontWeight: "600", padding: 4 },
-  divider: { height: 1, backgroundColor: "#EAECF0", marginVertical: 14 },
+
+  moduleHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+
+  moduleInfo: {
+    flex: 1,
+    paddingRight: 12,
+  },
+
+  moduleName: {
+    color: NAVY,
+    fontSize: 17,
+    fontWeight: "700",
+  },
+
+  moduleCode: {
+    color: MUTED,
+    marginTop: 4,
+    fontSize: 13,
+  },
+
+  moduleDescription: {
+    color: MUTED,
+    marginTop: 5,
+    lineHeight: 19,
+  },
+
+  deleteText: {
+    color: "#B42318",
+    fontWeight: "600",
+    padding: 4,
+  },
+
+  divider: {
+    height: 1,
+    backgroundColor: "#EAECF0",
+    marginVertical: 14,
+  },
+
   secondaryButton: {
     backgroundColor: "#FFF4D6",
     borderWidth: 1,
@@ -773,8 +993,19 @@ const styles = StyleSheet.create({
     padding: 12,
     marginTop: 9,
   },
-  secondaryButtonText: { color: NAVY, fontWeight: "700" },
-  lectureCount: { color: MUTED, fontSize: 12, marginTop: 12, marginBottom: 5 },
+
+  secondaryButtonText: {
+    color: NAVY,
+    fontWeight: "700",
+  },
+
+  lectureCount: {
+    color: MUTED,
+    fontSize: 12,
+    marginTop: 12,
+    marginBottom: 5,
+  },
+
   lectureRow: {
     backgroundColor: "#F5F7FA",
     padding: 10,
@@ -783,13 +1014,90 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "transparent",
   },
+
   highlightedLectureRow: {
     backgroundColor: "#FFF4D6",
     borderColor: GOLD,
     borderWidth: 2,
   },
-  lectureTitle: { color: "#101828", fontWeight: "600" },
-  lectureTopic: { color: MUTED, marginTop: 3, fontSize: 13 },
+
+  lectureTitle: {
+    color: "#101828",
+    fontWeight: "600",
+  },
+
+  lectureTopic: {
+    color: MUTED,
+    marginTop: 3,
+    fontSize: 13,
+  },
+
+  lectureActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 8,
+  },
+
+  editButton: {
+    flex: 1,
+    backgroundColor: NAVY,
+    borderRadius: 8,
+    padding: 11,
+    alignItems: "center",
+  },
+
+  editButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+
+  cancelButton: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#D0D5DD",
+    borderRadius: 8,
+    padding: 11,
+    alignItems: "center",
+  },
+
+  cancelButtonText: {
+    color: "#344054",
+    fontWeight: "600",
+  },
+
+  editLink: {
+    alignSelf: "flex-start",
+    marginTop: 8,
+    marginBottom: 4,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    backgroundColor: "#FFF4D6",
+  },
+
+  editLinkText: {
+    color: NAVY,
+    fontWeight: "700",
+    fontSize: 13,
+  },
+
+  deleteLectureLink: {
+    alignSelf: "flex-start",
+    marginTop: 8,
+    marginBottom: 4,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    backgroundColor: "#FEE4E2",
+  },
+
+  deleteLectureText: {
+    color: "#B42318",
+    fontWeight: "700",
+    fontSize: 13,
+  },
+
   homeButton: {
     backgroundColor: NAVY,
     borderRadius: 10,
@@ -797,63 +1105,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 10,
   },
-  homeButtonText: { color: "#FFFFFF", fontWeight: "700" },
-  lectureActions: {
-  flexDirection: "row",
-  gap: 10,
-  marginTop: 8,
-},
-editButton: {
-  flex: 1,
-  backgroundColor: NAVY,
-  borderRadius: 8,
-  padding: 11,
-  alignItems: "center",
-},
-editButtonText: {
-  color: "#FFFFFF",
-  fontWeight: "700",
-},
-cancelButton: {
-  flex: 1,
-  backgroundColor: "#FFFFFF",
-  borderWidth: 1,
-  borderColor: "#D0D5DD",
-  borderRadius: 8,
-  padding: 11,
-  alignItems: "center",
-},
-cancelButtonText: {
-  color: "#344054",
-  fontWeight: "600",
-},
-editLink: {
-  alignSelf: "flex-start",
-  marginTop: 8,
-  marginBottom: 4,
-  paddingVertical: 5,
-  paddingHorizontal: 8,
-  borderRadius: 6,
-  backgroundColor: "#FFF4D6",
-},
-editLinkText: {
-  color: NAVY,
-  fontWeight: "700",
-  fontSize: 13,
-},
-deleteLectureLink: {
-  alignSelf: "flex-start",
-  marginTop: 8,
-  marginBottom: 4,
-  paddingVertical: 5,
-  paddingHorizontal: 8,
-  borderRadius: 6,
-  backgroundColor: "#FEE4E2",
-},
 
-deleteLectureText: {
-  color: "#B42318",
-  fontWeight: "700",
-  fontSize: 13,
-},
+  homeButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
 });

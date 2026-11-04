@@ -1,6 +1,5 @@
-
 import React from "react";
-import { View, ScrollView, Text } from "react-native";
+import { View, ScrollView } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 
 import HomeHeader from "../components/home/HomeHeader";
@@ -24,9 +23,6 @@ export default function Notes() {
     ? params.lectureId[0]
     : params.lectureId;
 
-  const hasSelectedLecture =
-    moduleId != null && lectureId != null;
-
   return (
     <View style={styles.main}>
       <HomeHeader userName="Vitumbiko" />
@@ -36,39 +32,6 @@ export default function Notes() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
       >
-        {hasSelectedLecture && (
-          <View
-            style={{
-              backgroundColor: "#FFF9E9",
-              borderColor: "#F2B544",
-              borderWidth: 1,
-              borderRadius: 10,
-              padding: 12,
-              marginBottom: 14,
-            }}
-          >
-            <Text
-              style={{
-                color: "#12325B",
-                fontSize: 15,
-                fontWeight: "700",
-              }}
-            >
-              Notes for the selected lecture
-            </Text>
-
-            <Text
-              style={{
-                color: "#667085",
-                fontSize: 12,
-                marginTop: 4,
-              }}
-            >
-              Loading the selected module and lecture...
-            </Text>
-          </View>
-        )}
-
         <SearchBar />
 
         <NotesStats />

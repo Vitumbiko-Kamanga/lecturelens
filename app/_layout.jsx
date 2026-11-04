@@ -1,24 +1,24 @@
+
 import { useLayoutEffect } from "react";
 import { setAuthTokenGetter } from "../services/api";
 
-import { ClerkProvider, useAuth } from '@clerk/expo';
-import { tokenCache } from '@clerk/expo/token-cache';
-import { Stack } from 'expo-router';
+import { ClerkProvider, useAuth } from "@clerk/expo";
+import { tokenCache } from "@clerk/expo/token-cache";
+import { Stack } from "expo-router";
 
-const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
+const publishableKey =
+  process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 if (!publishableKey) {
   throw new Error(
-    'Missing Clerk publishable key. Check your .env file.'
+    "Missing Clerk publishable key. Check your .env file."
   );
 }
-
 
 function RootNavigator() {
   const { isLoaded, isSignedIn, getToken } = useAuth();
 
   useLayoutEffect(() => {
-    // Register the function that retrieves the actual Clerk token.
     setAuthTokenGetter(getToken);
 
     return () => {
@@ -34,9 +34,12 @@ function RootNavigator() {
     <Stack
       screenOptions={{
         headerShown: false,
-        animation: "slide_from_right",
-        animationDuration: 220,
+
+        // Disable screen transition animations.
+        animation: "none",
+
         gestureEnabled: true,
+
         contentStyle: {
           backgroundColor: "#F5F7FA",
         },
@@ -63,7 +66,6 @@ function RootNavigator() {
     </Stack>
   );
 }
-
 
 export default function Layout() {
   return (

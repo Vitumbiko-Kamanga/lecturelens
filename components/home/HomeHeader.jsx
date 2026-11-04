@@ -1,4 +1,3 @@
-
 import React from "react";
 import { View, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -6,28 +5,28 @@ import { Ionicons } from "@expo/vector-icons";
 import styles from "../../styles/homeStyles";
 
 export default function HomeHeader({ userName }) {
+  const initial = userName?.trim()?.[0]?.toUpperCase() || "S";
+
   return (
     <View style={styles.header}>
+      {/* Logged-in user's initial */}
       <View style={styles.usernameContainer}>
-        <Text style={styles.userName}>
-          {userName?.[0] || "S"}
-        </Text>
+        <Text style={styles.userName}>{initial}</Text>
       </View>
 
-      <View>
-        <Ionicons
-          name="binoculars-outline"
-          size={22}
-        />
-      </View>
+      {/* LectureLens icon */}
+      <Ionicons
+        name="binoculars-outline"
+        size={28}
+        color="#FFFFFF"
+      />
 
-      <View>
-        <Ionicons
-          name="menu-outline"
-          size={22}
-          color="#FFF"
-        />
-      </View>
+      {/* Menu icon */}
+      <Ionicons
+        name="menu-outline"
+        size={28}
+        color="#FFFFFF"
+      />
     </View>
   );
 }

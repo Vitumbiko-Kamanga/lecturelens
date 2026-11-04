@@ -1,4 +1,3 @@
-
 import { StyleSheet } from "react-native";
 
 const NAVY = "#12325B";
@@ -22,25 +21,21 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
 
+  // Home header
   header: {
-    marginTop: 50,
+    backgroundColor: NAVY,
     paddingHorizontal: 20,
-    marginBottom: 20,
+    paddingTop: 55,
+    paddingBottom: 18,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
 
-  greeting: {
-    fontSize: 16,
-    color: MUTED,
-    fontWeight: "500",
-  },
-
   usernameContainer: {
-    backgroundColor: NAVY,
-    width: 40,
-    height: 40,
+    backgroundColor: GOLD,
+    width: 42,
+    height: 42,
     borderRadius: 50,
     alignItems: "center",
     justifyContent: "center",
@@ -49,15 +44,10 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 18,
     fontWeight: "bold",
-    color: WHITE,
-  },
-
-  tagline: {
-    fontSize: 14,
     color: NAVY,
-    marginTop: 2,
   },
 
+  // Search
   searchSection: {
     flexDirection: "row",
     alignItems: "center",
@@ -78,6 +68,7 @@ const styles = StyleSheet.create({
     color: NAVY,
   },
 
+  // Quick Actions
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
@@ -110,6 +101,7 @@ const styles = StyleSheet.create({
     color: TEXT,
   },
 
+  // Recent Lectures
   lectureCard: {
     backgroundColor: WHITE,
     borderRadius: 20,
@@ -186,6 +178,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
+  // Floating recording button
   floatingButton: {
     position: "absolute",
     bottom: 90,

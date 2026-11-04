@@ -52,6 +52,7 @@ export default function ModuleReferences() {
   const [error, setError] = useState("");
 
   const [showForm, setShowForm] = useState(false);
+  const [editingResourceId, setEditingResourceId] = useState(null);
 
   const [resourceTitle, setResourceTitle] = useState("");
   const [resourceAuthor, setResourceAuthor] = useState("");
@@ -85,6 +86,24 @@ export default function ModuleReferences() {
     loadResources();
   }, [loadResources]);
 
+  function resetResourceForm() {
+    setResourceTitle("");
+    setResourceAuthor("");
+    setResourceUrl("");
+    setResourceType("book");
+    setEditingResourceId(null);
+    setShowForm(false);
+  }
+
+  function startEditingResource(resource) {
+    setEditingResourceId(resource.id);
+    setResourceTitle(resource.title || "");
+    setResourceAuthor(resource.author || "");
+    setResourceUrl(resource.url || "");
+    setResourceType(resource.resource_type || "other");
+    setShowForm(true);
+  }
+
   async function saveResource() {
     if (!resourceTitle.trim()) {
       Alert.alert(
@@ -117,35 +136,61 @@ export default function ModuleReferences() {
         resource_type: resourceType,
       };
 
-      const result = await api.createResource(
-        moduleId,
-        resourceData
-      );
+      if (editingResourceId !== null) {
+        const result = await api.updateResource(
+          editingResourceId,
+          resourceData
+        );
 
-      const savedResource = result?.resource || result;
+        const updatedResource = result?.resource || result;
 
-      if (savedResource?.id) {
-        setResources((previous) => [
-          savedResource,
-          ...previous,
-        ]);
+        if (updatedResource?.id) {
+          setResources((previous) =>
+            previous.map((item) =>
+              String(item.id) === String(editingResourceId)
+                ? updatedResource
+                : item
+            )
+          );
+        } else {
+          await loadResources();
+        }
+
+        resetResourceForm();
+
+        Alert.alert(
+          "Resource updated",
+          "Your learning resource has been updated."
+        );
       } else {
-        await loadResources();
+        const result = await api.createResource(
+          moduleId,
+          resourceData
+        );
+
+        const savedResource = result?.resource || result;
+
+        if (savedResource?.id) {
+          setResources((previous) => [
+            savedResource,
+            ...previous,
+          ]);
+        } else {
+          await loadResources();
+        }
+
+        resetResourceForm();
+
+        Alert.alert(
+          "Resource saved",
+          "Your learning resource has been saved."
+        );
       }
-
-      setResourceTitle("");
-      setResourceAuthor("");
-      setResourceUrl("");
-      setResourceType("book");
-      setShowForm(false);
-
-      Alert.alert(
-        "Resource saved",
-        "Your learning resource has been saved."
-      );
     } catch (err) {
       Alert.alert(
-        "Could not save resource",
+        editingResourceId !== null
+          ? "Could not update resource"
+          : "Could not save resource",
         err.message || "Please try again."
       );
     } finally {
@@ -195,6 +240,12 @@ export default function ModuleReferences() {
         )
       );
 
+      if (
+        String(editingResourceId) === String(resource.id)
+      ) {
+        resetResourceForm();
+      }
+
       Alert.alert(
         "Resource deleted",
         "The resource has been removed successfully."
@@ -243,6 +294,9 @@ export default function ModuleReferences() {
   function renderResource(resource) {
     const isDeleting =
       String(deletingResourceId) === String(resource.id);
+
+    const isEditing =
+      String(editingResourceId) === String(resource.id);
 
     return (
       <View
@@ -323,46 +377,88 @@ export default function ModuleReferences() {
               </TouchableOpacity>
             )}
 
-            <TouchableOpacity
-              onPress={() => confirmDeleteResource(resource)}
-              disabled={deletingResourceId !== null}
-              activeOpacity={0.7}
+            <View
               style={{
                 flexDirection: "row",
-                alignItems: "center",
-                alignSelf: "flex-start",
+                flexWrap: "wrap",
+                gap: 10,
                 marginTop: 14,
-                paddingVertical: 8,
-                paddingHorizontal: 12,
-                borderRadius: 8,
-                backgroundColor: isDeleting
-                  ? "#F3F4F6"
-                  : "#FEF2F2",
               }}
             >
-              {isDeleting ? (
-                <ActivityIndicator
-                  size="small"
-                  color="#B42318"
-                />
-              ) : (
-                <Ionicons
-                  name="trash-outline"
-                  size={17}
-                  color="#B42318"
-                />
-              )}
-
-              <Text
+              <TouchableOpacity
+                onPress={() => startEditingResource(resource)}
+                disabled={
+                  deletingResourceId !== null ||
+                  resourceSaving
+                }
                 style={{
-                  color: "#B42318",
-                  fontWeight: "600",
-                  marginLeft: 6,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  paddingVertical: 8,
+                  paddingHorizontal: 12,
+                  borderRadius: 8,
+                  backgroundColor: "#EFF6FF",
                 }}
               >
-                {isDeleting ? "Deleting..." : "Delete Resource"}
-              </Text>
-            </TouchableOpacity>
+                <Ionicons
+                  name="create-outline"
+                  size={17}
+                  color="#12325B"
+                />
+
+                <Text
+                  style={{
+                    color: "#12325B",
+                    fontWeight: "600",
+                    marginLeft: 6,
+                  }}
+                >
+                  {isEditing ? "Editing" : "Edit Resource"}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => confirmDeleteResource(resource)}
+                disabled={
+                  deletingResourceId !== null ||
+                  resourceSaving ||
+                  isEditing
+                }
+                activeOpacity={0.7}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  paddingVertical: 8,
+                  paddingHorizontal: 12,
+                  borderRadius: 8,
+                  backgroundColor: "#FEF2F2",
+                  opacity: isEditing ? 0.5 : 1,
+                }}
+              >
+                {isDeleting ? (
+                  <ActivityIndicator
+                    size="small"
+                    color="#B42318"
+                  />
+                ) : (
+                  <Ionicons
+                    name="trash-outline"
+                    size={17}
+                    color="#B42318"
+                  />
+                )}
+
+                <Text
+                  style={{
+                    color: "#B42318",
+                    fontWeight: "600",
+                    marginLeft: 6,
+                  }}
+                >
+                  {isDeleting ? "Deleting..." : "Delete Resource"}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
@@ -431,8 +527,15 @@ export default function ModuleReferences() {
         </Text>
 
         <TouchableOpacity
-          onPress={() => setShowForm((previous) => !previous)}
+          onPress={() => {
+            if (showForm) {
+              resetResourceForm();
+            } else {
+              setShowForm(true);
+            }
+          }}
           activeOpacity={0.8}
+          disabled={resourceSaving}
           style={{
             flexDirection: "row",
             justifyContent: "center",
@@ -456,7 +559,9 @@ export default function ModuleReferences() {
               marginLeft: 8,
             }}
           >
-            {showForm ? "Cancel" : "Add Resource"}
+            {showForm
+              ? "Cancel"
+              : "Add Resource"}
           </Text>
         </TouchableOpacity>
 
@@ -478,7 +583,9 @@ export default function ModuleReferences() {
                 marginBottom: 18,
               }}
             >
-              Add Learning Resource
+              {editingResourceId !== null
+                ? "Edit Learning Resource"
+                : "Add Learning Resource"}
             </Text>
 
             <Text style={formLabel}>Resource title *</Text>
@@ -488,6 +595,7 @@ export default function ModuleReferences() {
               onChangeText={setResourceTitle}
               placeholder="e.g. Introduction to Database Systems"
               style={formInput}
+              editable={!resourceSaving}
             />
 
             <Text style={formLabel}>Author (optional)</Text>
@@ -497,6 +605,7 @@ export default function ModuleReferences() {
               onChangeText={setResourceAuthor}
               placeholder="Enter author or publisher"
               style={formInput}
+              editable={!resourceSaving}
             />
 
             <Text style={formLabel}>Resource URL (optional)</Text>
@@ -508,6 +617,7 @@ export default function ModuleReferences() {
               autoCapitalize="none"
               keyboardType="url"
               style={formInput}
+              editable={!resourceSaving}
             />
 
             <Text style={formLabel}>Resource type</Text>
@@ -527,6 +637,7 @@ export default function ModuleReferences() {
                   <TouchableOpacity
                     key={type}
                     onPress={() => setResourceType(type)}
+                    disabled={resourceSaving}
                     style={{
                       borderWidth: 1,
                       borderColor: selected
@@ -582,10 +693,33 @@ export default function ModuleReferences() {
                     fontWeight: "700",
                   }}
                 >
-                  Save Resource
+                  {editingResourceId !== null
+                    ? "Save Changes"
+                    : "Save Resource"}
                 </Text>
               )}
             </TouchableOpacity>
+
+            {editingResourceId !== null && (
+              <TouchableOpacity
+                onPress={resetResourceForm}
+                disabled={resourceSaving}
+                style={{
+                  padding: 12,
+                  alignItems: "center",
+                  marginTop: 8,
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#64748B",
+                    fontWeight: "600",
+                  }}
+                >
+                  Cancel Edit
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 

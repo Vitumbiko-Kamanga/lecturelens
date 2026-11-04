@@ -1,6 +1,11 @@
 
 import React from "react";
-import { View, Text, Alert } from "react-native";
+import {
+  View,
+  Text,
+  Alert,
+} from "react-native";
+
 import { useRouter } from "expo-router";
 
 import QuickActionCard from "./QuickActionCard";
@@ -9,9 +14,18 @@ import styles from "../../styles/homeStyles";
 export default function QuickActions() {
   const router = useRouter();
 
+  const showComingSoon = (feature) => {
+    Alert.alert(
+      feature,
+      `${feature} is planned for a future LectureLens update.`
+    );
+  };
+
   return (
     <View>
-      <Text style={styles.sectionTitle}>Quick Actions</Text>
+      <Text style={styles.sectionTitle}>
+        Quick Actions
+      </Text>
 
       <View style={styles.actionsGrid}>
         <QuickActionCard
@@ -29,27 +43,17 @@ export default function QuickActions() {
         />
 
         <QuickActionCard
-         icon="reader"
-         title="Summaries"
-         color="#10B981"
-         onPress={() =>
-            Alert.alert(
-            "Summaries",
-            "Lecture summaries are not available yet. This feature will be added in a future update."
-            )
-        }
+          icon="reader"
+          title="Summaries"
+          color="#10B981"
+          onPress={() => showComingSoon("Summaries")}
         />
 
         <QuickActionCard
-         icon="sparkles"
-         title="Ask AI"
-         color="#8B5CF6"
-         onPress={() =>
-            Alert.alert(
-            "Ask AI",
-            "AI assistance is not available yet. This feature will be added in a future update."
-            )
-         }
+          icon="sparkles"
+          title="Ask AI"
+          color="#8B5CF6"
+          onPress={() => showComingSoon("Ask AI")}
         />
       </View>
     </View>

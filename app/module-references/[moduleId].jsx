@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useState } from "react";
 
 import {
@@ -325,6 +324,7 @@ export default function ModuleReferences() {
             style={{
               flex: 1,
               marginLeft: 12,
+              minWidth: 0,
             }}
           >
             <Text
@@ -377,46 +377,58 @@ export default function ModuleReferences() {
               </TouchableOpacity>
             )}
 
+            {/* Compact Edit and Delete buttons */}
             <View
               style={{
                 flexDirection: "row",
+                alignItems: "center",
                 flexWrap: "wrap",
-                gap: 10,
+                gap: 8,
                 marginTop: 14,
               }}
             >
+              {/* Edit button */}
               <TouchableOpacity
                 onPress={() => startEditingResource(resource)}
                 disabled={
                   deletingResourceId !== null ||
                   resourceSaving
                 }
+                activeOpacity={0.8}
                 style={{
                   flexDirection: "row",
                   alignItems: "center",
-                  paddingVertical: 8,
+                  justifyContent: "center",
+                  backgroundColor: "#12325B",
+                  paddingVertical: 7,
                   paddingHorizontal: 12,
                   borderRadius: 8,
-                  backgroundColor: "#EFF6FF",
+                  opacity:
+                    deletingResourceId !== null ||
+                    resourceSaving
+                      ? 0.6
+                      : 1,
                 }}
               >
                 <Ionicons
                   name="create-outline"
-                  size={17}
-                  color="#12325B"
+                  size={16}
+                  color="#FFFFFF"
                 />
 
                 <Text
                   style={{
-                    color: "#12325B",
+                    color: "#FFFFFF",
                     fontWeight: "600",
-                    marginLeft: 6,
+                    fontSize: 13,
+                    marginLeft: 5,
                   }}
                 >
-                  {isEditing ? "Editing" : "Edit Resource"}
+                  {isEditing ? "Editing" : "Edit"}
                 </Text>
               </TouchableOpacity>
 
+              {/* Delete button */}
               <TouchableOpacity
                 onPress={() => confirmDeleteResource(resource)}
                 disabled={
@@ -424,38 +436,40 @@ export default function ModuleReferences() {
                   resourceSaving ||
                   isEditing
                 }
-                activeOpacity={0.7}
+                activeOpacity={0.8}
                 style={{
                   flexDirection: "row",
                   alignItems: "center",
-                  paddingVertical: 8,
+                  justifyContent: "center",
+                  backgroundColor: "#B42318",
+                  paddingVertical: 7,
                   paddingHorizontal: 12,
                   borderRadius: 8,
-                  backgroundColor: "#FEF2F2",
                   opacity: isEditing ? 0.5 : 1,
                 }}
               >
                 {isDeleting ? (
                   <ActivityIndicator
                     size="small"
-                    color="#B42318"
+                    color="#FFFFFF"
                   />
                 ) : (
                   <Ionicons
                     name="trash-outline"
-                    size={17}
-                    color="#B42318"
+                    size={16}
+                    color="#FFFFFF"
                   />
                 )}
 
                 <Text
                   style={{
-                    color: "#B42318",
+                    color: "#FFFFFF",
                     fontWeight: "600",
-                    marginLeft: 6,
+                    fontSize: 13,
+                    marginLeft: 5,
                   }}
                 >
-                  {isDeleting ? "Deleting..." : "Delete Resource"}
+                  {isDeleting ? "Deleting..." : "Delete"}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -559,9 +573,7 @@ export default function ModuleReferences() {
               marginLeft: 8,
             }}
           >
-            {showForm
-              ? "Cancel"
-              : "Add Resource"}
+            {showForm ? "Cancel" : "Add Resource"}
           </Text>
         </TouchableOpacity>
 

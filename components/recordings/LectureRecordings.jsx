@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -14,6 +13,9 @@ import {
   useAudioPlayer,
   useAudioPlayerStatus,
 } from "expo-audio";
+
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "../../services/api";
@@ -39,6 +41,16 @@ function formatSize(bytes) {
   }
 
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+// Escape transcript content before inserting it into HTML.
+function escapeHtml(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 // Detect possible author-year citations in lecture transcripts.
@@ -98,6 +110,9 @@ export default function LectureRecordings({ lectureId }) {
   const [citationCandidates, setCitationCandidates] = useState({});
   const [citationResults, setCitationResults] = useState({});
   const [citationSearchLoading, setCitationSearchLoading] = useState(null);
+
+  // PDF export loading state.
+  const [exportingTranscriptId, setExportingTranscriptId] = useState(null);
 
   const loadRecordings = useCallback(async () => {
     try {
@@ -242,6 +257,219 @@ export default function LectureRecordings({ lectureId }) {
       setError(err.message || "Could not load the transcript.");
     } finally {
       setTranscriptLoadingId(null);
+    }
+  }
+
+  // Export a saved transcript as a PDF and open the sharing dialog.
+  async function handleExportTranscript(recording, transcript) {
+    const recordingId = String(recording.id);
+
+    if (exportingTranscriptId) return;
+
+    try {
+      setExportingTranscriptId(recordingId);
+
+      const recordingTitle =
+        recording.title || "Lecture recording";
+
+      const recordingDate = recording.created_at
+        ? new Date(recording.created_at).toLocaleDateString()
+        : "Date unavailable";
+
+      const language = transcript.language || "Unknown";
+
+      const duration =
+        transcript.duration_seconds != null
+          ? formatTime(transcript.duration_seconds)
+          : "Unavailable";
+
+      const transcriptText =
+        typeof transcript.transcript === "string" &&
+        transcript.transcript.trim()
+          ? transcript.transcript
+          : "No speech was recognized in this recording.";
+
+      const segments = Array.isArray(transcript.segments)
+        ? transcript.segments
+        : [];
+
+      const segmentsHtml =
+        segments.length > 0
+          ? `
+            <section class="segments">
+              <h2>Timestamped segments</h2>
+              ${segments
+                .map(
+                  (segment) => `
+                    <div class="segment">
+                      <span class="timestamp">${escapeHtml(
+                        formatTime(segment.start)
+                      )}</span>
+                      <span class="segment-text">${escapeHtml(
+                        segment.text || ""
+                      )}</span>
+                    </div>
+                  `
+                )
+                .join("")}
+            </section>
+          `
+          : "";
+
+      const html = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+            <style>
+              @page {
+                margin: 24px;
+              }
+
+              body {
+                font-family: Arial, Helvetica, sans-serif;
+                color: #101828;
+                font-size: 12px;
+                line-height: 1.6;
+              }
+
+              .header {
+                border-bottom: 3px solid ${GOLD};
+                padding-bottom: 14px;
+                margin-bottom: 20px;
+              }
+
+              .brand {
+                color: ${NAVY};
+                font-size: 12px;
+                font-weight: bold;
+                letter-spacing: 1px;
+              }
+
+              h1 {
+                color: ${NAVY};
+                font-size: 23px;
+                margin: 8px 0;
+                overflow-wrap: break-word;
+              }
+
+              .metadata {
+                color: #667085;
+                font-size: 11px;
+                margin-top: 10px;
+              }
+
+              .metadata p {
+                margin: 3px 0;
+              }
+
+              h2 {
+                color: ${NAVY};
+                font-size: 16px;
+                margin-top: 24px;
+                margin-bottom: 10px;
+              }
+
+              .transcript {
+                white-space: pre-wrap;
+                overflow-wrap: break-word;
+                font-size: 12px;
+                line-height: 1.8;
+              }
+
+              .segments {
+                margin-top: 24px;
+                page-break-inside: auto;
+              }
+
+              .segment {
+                display: flex;
+                align-items: flex-start;
+                margin-bottom: 10px;
+                page-break-inside: avoid;
+              }
+
+              .timestamp {
+                color: ${NAVY};
+                font-weight: bold;
+                min-width: 48px;
+                margin-right: 10px;
+              }
+
+              .segment-text {
+                flex: 1;
+                overflow-wrap: break-word;
+              }
+
+              .footer {
+                border-top: 1px solid #E5EAF0;
+                margin-top: 30px;
+                padding-top: 10px;
+                color: #667085;
+                font-size: 10px;
+              }
+            </style>
+          </head>
+
+          <body>
+            <div class="header">
+              <div class="brand">LECTURELENS</div>
+              <h1>${escapeHtml(recordingTitle)}</h1>
+
+              <div class="metadata">
+                <p><strong>Recording date:</strong> ${escapeHtml(recordingDate)}</p>
+                <p><strong>Language:</strong> ${escapeHtml(language)}</p>
+                <p><strong>Duration:</strong> ${escapeHtml(duration)}</p>
+              </div>
+            </div>
+
+            <section>
+              <h2>Lecture transcript</h2>
+              <div class="transcript">${escapeHtml(transcriptText)}</div>
+            </section>
+
+            ${segmentsHtml}
+
+            <div class="footer">
+              Exported from LectureLens
+            </div>
+          </body>
+        </html>
+      `;
+
+      const pdf = await Print.printToFileAsync({
+        html,
+        base64: false,
+      });
+
+      if (!pdf?.uri) {
+        throw new Error("The PDF file could not be generated.");
+      }
+
+      const sharingAvailable = await Sharing.isAvailableAsync();
+
+      if (!sharingAvailable) {
+        Alert.alert(
+          "PDF created",
+          "The transcript PDF was created, but sharing is not available on this device."
+        );
+        return;
+      }
+
+      await Sharing.shareAsync(pdf.uri, {
+        mimeType: "application/pdf",
+        dialogTitle: `Share ${recordingTitle} transcript`,
+        UTI: "com.adobe.pdf",
+      });
+    } catch (err) {
+      Alert.alert(
+        "PDF export failed",
+        err.message || "Could not export this transcript."
+      );
+    } finally {
+      setExportingTranscriptId(null);
     }
   }
 
@@ -540,6 +768,31 @@ export default function LectureRecordings({ lectureId }) {
                       ? `  ·  ${formatTime(transcript.duration_seconds)}`
                       : ""}
                   </Text>
+
+                  {/* PDF export action */}
+                  <TouchableOpacity
+                    style={styles.exportButton}
+                    onPress={() =>
+                      handleExportTranscript(recording, transcript)
+                    }
+                    disabled={Boolean(exportingTranscriptId)}
+                  >
+                    {exportingTranscriptId === recordingId ? (
+                      <ActivityIndicator color="#FFFFFF" size="small" />
+                    ) : (
+                      <Ionicons
+                        name="document-outline"
+                        size={17}
+                        color="#FFFFFF"
+                      />
+                    )}
+
+                    <Text style={styles.exportButtonText}>
+                      {exportingTranscriptId === recordingId
+                        ? "Preparing PDF..."
+                        : "Export transcript to PDF"}
+                    </Text>
+                  </TouchableOpacity>
 
                   <Text style={styles.transcriptText}>
                     {transcript.transcript ||
@@ -941,6 +1194,24 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 5,
     marginBottom: 10,
+  },
+
+  exportButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    backgroundColor: NAVY,
+    borderRadius: 8,
+    paddingVertical: 11,
+    paddingHorizontal: 10,
+    marginBottom: 14,
+  },
+
+  exportButtonText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
   },
 
   transcriptText: {

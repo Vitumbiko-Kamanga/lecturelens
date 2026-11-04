@@ -1,4 +1,3 @@
-
 import React, {
   useCallback,
   useEffect,
@@ -38,6 +37,7 @@ function getItems(result, key) {
 export default function ModulesSection({
   initialModuleId,
   initialLectureId,
+  onSelectedLectureChange,
 }) {
   const [modules, setModules] = useState([]);
   const [expandedModule, setExpandedModule] = useState(null);
@@ -128,42 +128,52 @@ export default function ModulesSection({
     }
   }, []);
 
-  const openLecture = useCallback(async (lecture) => {
-    setSelectedLecture(lecture);
-    setNotes([]);
-    setRecordings([]);
-    setTranscriptsByRecording({});
-    setExpandedTranscriptId(null);
-    setTranscriptErrors({});
-    setTranscriptSearch("");
-    setNotesLoading(true);
-    setRecordingsLoading(true);
-    setError("");
-    setRecordingsError("");
-    setSearchSubmitted("");
-    setSearchResults([]);
-    setSearchError("");
+  // Open a lecture and notify the Notes screen about its module and title.
+  const openLecture = useCallback(
+    async (lecture, moduleName) => {
+      setSelectedLecture(lecture);
 
-    try {
-      const result = await api.listNotes(lecture.id);
-      setNotes(getItems(result, "notes"));
-    } catch (err) {
-      setError(err.message || "Could not load notes.");
-    } finally {
-      setNotesLoading(false);
-    }
+      onSelectedLectureChange?.({
+        moduleName: moduleName || "Unknown module",
+        lectureTitle: lecture.title || "Untitled lecture",
+      });
 
-    try {
-      const result = await api.listRecordings(lecture.id);
-      setRecordings(getItems(result, "recordings"));
-    } catch (err) {
-      setRecordingsError(
-        err.message || "Could not load lecture recordings."
-      );
-    } finally {
-      setRecordingsLoading(false);
-    }
-  }, []);
+      setNotes([]);
+      setRecordings([]);
+      setTranscriptsByRecording({});
+      setExpandedTranscriptId(null);
+      setTranscriptErrors({});
+      setTranscriptSearch("");
+      setNotesLoading(true);
+      setRecordingsLoading(true);
+      setError("");
+      setRecordingsError("");
+      setSearchSubmitted("");
+      setSearchResults([]);
+      setSearchError("");
+
+      try {
+        const result = await api.listNotes(lecture.id);
+        setNotes(getItems(result, "notes"));
+      } catch (err) {
+        setError(err.message || "Could not load notes.");
+      } finally {
+        setNotesLoading(false);
+      }
+
+      try {
+        const result = await api.listRecordings(lecture.id);
+        setRecordings(getItems(result, "recordings"));
+      } catch (err) {
+        setRecordingsError(
+          err.message || "Could not load lecture recordings."
+        );
+      } finally {
+        setRecordingsLoading(false);
+      }
+    },
+    [onSelectedLectureChange]
+  );
 
   // Automatically open the lecture requested by the Home screen.
   useEffect(() => {
@@ -222,7 +232,8 @@ export default function ModulesSection({
         }
 
         handledSelectionRef.current = selectionKey;
-        await openLecture(targetLecture);
+
+        await openLecture(targetLecture, targetModule.name);
       } catch (err) {
         if (active) {
           setError(err.message || "Could not open the selected lecture.");
@@ -253,6 +264,10 @@ export default function ModulesSection({
       setSelectedLecture(null);
       setNotes([]);
       setRecordings([]);
+
+      // Clear the selected lecture banner.
+      onSelectedLectureChange?.(null);
+
       return;
     }
 
@@ -260,6 +275,10 @@ export default function ModulesSection({
     setSelectedLecture(null);
     setNotes([]);
     setRecordings([]);
+
+    // Clear the previous selection when switching modules.
+    onSelectedLectureChange?.(null);
+
     setLecturesLoading(true);
     setError("");
 
@@ -658,7 +677,7 @@ export default function ModulesSection({
     <View style={{ marginBottom: 170 }}>
       <Text
         style={{
-          fontSize: 21,
+          fontSize: 18,
           fontWeight: "800",
           color: NAVY,
           marginBottom: 14,
@@ -703,7 +722,9 @@ export default function ModulesSection({
                   )}
 
                   <Text style={styles.muted}>
-                    {isExpanded ? "Tap to collapse" : "Tap to view lectures and resources"}
+                    {isExpanded
+                      ? "Tap to collapse"
+                      : "Tap to view lectures and resources"}
                   </Text>
                 </View>
 
@@ -727,7 +748,7 @@ export default function ModulesSection({
                     moduleLectures.map((lecture) => (
                       <TouchableOpacity
                         key={lecture.id}
-                        onPress={() => openLecture(lecture)}
+                        onPress={() => openLecture(lecture, module.name)}
                         style={[
                           styles.lectureButton,
                           String(selectedLecture?.id) === String(lecture.id) &&
@@ -769,7 +790,9 @@ export default function ModulesSection({
                           onPress={() => loadModuleResources(module.id)}
                           style={styles.retryButton}
                         >
-                          <Text style={styles.retryText}>Retry loading resources</Text>
+                          <Text style={styles.retryText}>
+                            Retry loading resources
+                          </Text>
                         </TouchableOpacity>
                       </View>
                     ) : moduleResources.length === 0 ? (
@@ -1219,10 +1242,10 @@ const styles = {
     paddingHorizontal: 12,
     paddingBottom: 12,
   },
-  sectionTitle: {
+    sectionTitle: {
     color: NAVY,
-    fontSize: 15,
-    fontWeight: "800",
+    fontSize: 18,
+    fontWeight: "700",
     marginTop: 12,
     marginBottom: 6,
   },

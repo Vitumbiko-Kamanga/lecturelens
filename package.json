@@ -10,9 +10,11 @@
   },
   "dependencies": {
     "@clerk/expo": "^3.1.12",
+    "@google/genai": "^2.32.0",
     "expo": "~54.0.37",
     "expo-asset": "~12.0.14",
     "expo-audio": "~1.0.13",
+    "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.14",
     "expo-linking": "~8.0.12",
     "expo-router": "~6.0.24",

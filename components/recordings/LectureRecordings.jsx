@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -25,6 +26,7 @@ const GOLD = "#F2B544";
 const MUTED = "#667085";
 const RED = "#B42318";
 
+// Convert seconds into mm:ss.
 function formatTime(seconds = 0) {
   const safeSeconds = Number.isFinite(seconds) ? Math.floor(seconds) : 0;
   const minutes = Math.floor(safeSeconds / 60);
@@ -91,6 +93,28 @@ function detectCitationCandidates(transcript = "") {
   return candidates;
 }
 
+// Convert Gemini output into a displayable string.
+function getSummaryText(value) {
+  if (typeof value === "string") {
+    return value.trim();
+  }
+
+  if (value && typeof value === "object") {
+    return Object.entries(value)
+      .map(([heading, content]) => {
+        const section = Array.isArray(content)
+          ? content.map((item) => `• ${String(item)}`).join("\n")
+          : String(content ?? "");
+
+        return `${heading}\n${section}`;
+      })
+      .join("\n\n")
+      .trim();
+  }
+
+  return "";
+}
+
 export default function LectureRecordings({ lectureId }) {
   const player = useAudioPlayer(null);
   const status = useAudioPlayerStatus(player);
@@ -105,6 +129,10 @@ export default function LectureRecordings({ lectureId }) {
   const [transcripts, setTranscripts] = useState({});
   const [transcriptLoadingId, setTranscriptLoadingId] = useState(null);
   const [expandedTranscriptId, setExpandedTranscriptId] = useState(null);
+
+  // Gemini AI summarization.
+  const [summarizingId, setSummarizingId] = useState(null);
+  const [summaries, setSummaries] = useState({});
 
   // Citation detection and academic search states.
   const [citationCandidates, setCitationCandidates] = useState({});
@@ -172,7 +200,7 @@ export default function LectureRecordings({ lectureId }) {
   async function handleTranscribe(recording) {
     const recordingId = String(recording.id);
 
-    if (transcribingId || transcriptLoadingId) return;
+    if (transcribingId || transcriptLoadingId || summarizingId) return;
 
     try {
       setTranscribingId(recordingId);
@@ -190,7 +218,6 @@ export default function LectureRecordings({ lectureId }) {
         [recordingId]: transcript,
       }));
 
-      // Detect possible citations in the newly generated transcript.
       const candidates = detectCitationCandidates(transcript);
 
       setCitationCandidates((previous) => ({
@@ -202,6 +229,13 @@ export default function LectureRecordings({ lectureId }) {
         ...previous,
         [recordingId]: {},
       }));
+
+      // A new transcript means any previous summary is outdated.
+      setSummaries((previous) => {
+        const updated = { ...previous };
+        delete updated[recordingId];
+        return updated;
+      });
 
       setExpandedTranscriptId(recordingId);
 
@@ -221,7 +255,7 @@ export default function LectureRecordings({ lectureId }) {
   async function handleViewTranscript(recording) {
     const recordingId = String(recording.id);
 
-    if (transcriptLoadingId || transcribingId) return;
+    if (transcriptLoadingId || transcribingId || summarizingId) return;
 
     if (expandedTranscriptId === recordingId) {
       setExpandedTranscriptId(null);
@@ -244,7 +278,6 @@ export default function LectureRecordings({ lectureId }) {
         [recordingId]: transcript,
       }));
 
-      // Detect citations when loading an existing transcript too.
       const candidates = detectCitationCandidates(transcript);
 
       setCitationCandidates((previous) => ({
@@ -257,6 +290,54 @@ export default function LectureRecordings({ lectureId }) {
       setError(err.message || "Could not load the transcript.");
     } finally {
       setTranscriptLoadingId(null);
+    }
+  }
+
+  // Generate a Gemini summary from the saved transcript.
+  async function handleSummarizeRecording(recording) {
+    const recordingId = String(recording.id);
+    const transcript = transcripts[recordingId];
+
+    if (summarizingId || transcribingId || transcriptLoadingId) return;
+
+    if (!transcript?.transcript?.trim()) {
+      Alert.alert(
+        "Transcript required",
+        "Please transcribe this recording first before generating an AI summary."
+      );
+      return;
+    }
+
+    try {
+      setSummarizingId(recordingId);
+      setError("");
+
+      const result = await api.summarizeRecording(recording.id);
+
+      const summaryText = getSummaryText(result?.summary);
+
+      if (!summaryText) {
+        throw new Error(
+          "The AI service did not return a summary. Please try again."
+        );
+      }
+
+      setSummaries((previous) => ({
+        ...previous,
+        [recordingId]: summaryText,
+      }));
+
+      Alert.alert(
+        "AI summary generated",
+        "Your lecture summary and revision material are ready."
+      );
+    } catch (err) {
+      Alert.alert(
+        "AI summarization failed",
+        err.message || "Could not generate the lecture summary."
+      );
+    } finally {
+      setSummarizingId(null);
     }
   }
 
@@ -549,6 +630,19 @@ export default function LectureRecordings({ lectureId }) {
                   (item) => String(item.id) !== String(recording.id)
                 )
               );
+
+              // Clear cached transcript and summary for deleted recording.
+              setTranscripts((previous) => {
+                const updated = { ...previous };
+                delete updated[String(recording.id)];
+                return updated;
+              });
+
+              setSummaries((previous) => {
+                const updated = { ...previous };
+                delete updated[String(recording.id)];
+                return updated;
+              });
             } catch (err) {
               Alert.alert(
                 "Could not delete recording",
@@ -609,6 +703,7 @@ export default function LectureRecordings({ lectureId }) {
           const selected = recordingId === String(playingId);
 
           const transcript = transcripts[recordingId];
+          const summary = summaries[recordingId];
 
           const candidates = citationCandidates[recordingId] || [];
 
@@ -710,7 +805,10 @@ export default function LectureRecordings({ lectureId }) {
                   style={styles.transcribeButton}
                   onPress={() => handleTranscribe(recording)}
                   disabled={Boolean(
-                    transcribingId || transcriptLoadingId || busyId
+                    transcribingId ||
+                    transcriptLoadingId ||
+                    summarizingId ||
+                    busyId
                   )}
                 >
                   {transcribingId === recordingId ? (
@@ -734,7 +832,10 @@ export default function LectureRecordings({ lectureId }) {
                   style={styles.viewTranscriptButton}
                   onPress={() => handleViewTranscript(recording)}
                   disabled={Boolean(
-                    transcribingId || transcriptLoadingId || busyId
+                    transcribingId ||
+                    transcriptLoadingId ||
+                    summarizingId ||
+                    busyId
                   )}
                 >
                   {transcriptLoadingId === recordingId ? (
@@ -798,6 +899,83 @@ export default function LectureRecordings({ lectureId }) {
                     {transcript.transcript ||
                       "No speech was recognized in this recording."}
                   </Text>
+
+                  {/* Gemini AI summarization */}
+                  <View style={styles.aiSummaryContainer}>
+                    <View style={styles.aiSummaryHeadingRow}>
+                      <Ionicons
+                        name="sparkles-outline"
+                        size={20}
+                        color={NAVY}
+                      />
+
+                      <Text style={styles.aiSummaryHeading}>
+                        AI Lecture Summary
+                      </Text>
+                    </View>
+
+                    <Text style={styles.aiSummaryDescription}>
+                      Generate a concise lecture summary, key points,
+                      definitions, and revision questions from this transcript.
+                    </Text>
+
+                    <TouchableOpacity
+                      style={styles.summarizeButton}
+                      onPress={() => handleSummarizeRecording(recording)}
+                      disabled={Boolean(
+                        summarizingId ||
+                        transcribingId ||
+                        transcriptLoadingId
+                      )}
+                    >
+                      {summarizingId === recordingId ? (
+                        <ActivityIndicator
+                          color="#FFFFFF"
+                          size="small"
+                        />
+                      ) : (
+                        <Ionicons
+                          name="sparkles"
+                          size={17}
+                          color="#FFFFFF"
+                        />
+                      )}
+
+                      <Text style={styles.summarizeButtonText}>
+                        {summarizingId === recordingId
+                          ? "Generating AI summary..."
+                          : summary
+                            ? "Regenerate AI summary"
+                            : "Generate AI summary"}
+                      </Text>
+                    </TouchableOpacity>
+
+                    {summary && (
+                      <View style={styles.summaryResultCard}>
+                        <View style={styles.summaryResultHeader}>
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={18}
+                            color="#027A48"
+                          />
+
+                          <Text style={styles.summaryResultTitle}>
+                            Generated lecture summary
+                          </Text>
+                        </View>
+
+                        <Text style={styles.summaryText}>
+                          {summary}
+                        </Text>
+
+                        <Text style={styles.summaryDisclaimer}>
+                          Review the AI-generated content against your
+                          original lecture transcript before using it
+                          for academic work.
+                        </Text>
+                      </View>
+                    )}
+                  </View>
 
                   {/* Timestamped segments */}
                   {Array.isArray(transcript.segments) &&
@@ -1220,6 +1398,90 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
 
+  // Gemini AI summary styles.
+  aiSummaryContainer: {
+    marginTop: 16,
+    paddingTop: 13,
+    borderTopWidth: 1,
+    borderTopColor: "#E5EAF0",
+  },
+
+  aiSummaryHeadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    marginBottom: 8,
+  },
+
+  aiSummaryHeading: {
+    color: NAVY,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  aiSummaryDescription: {
+    color: MUTED,
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+
+  summarizeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    backgroundColor: NAVY,
+    borderRadius: 8,
+    paddingVertical: 11,
+    paddingHorizontal: 10,
+  },
+
+  summarizeButtonText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+
+  summaryResultCard: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 9,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: GOLD,
+  },
+
+  summaryResultHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    marginBottom: 10,
+  },
+
+  summaryResultTitle: {
+    flex: 1,
+    color: NAVY,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+
+  summaryText: {
+    color: "#101828",
+    fontSize: 13,
+    lineHeight: 21,
+  },
+
+  summaryDisclaimer: {
+    color: MUTED,
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 12,
+    paddingTop: 9,
+    borderTopWidth: 1,
+    borderTopColor: "#E5EAF0",
+  },
+
   segmentsContainer: {
     marginTop: 14,
     paddingTop: 10,
@@ -1255,7 +1517,7 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
 
-  // Citation detection styles
+  // Citation detection styles.
   citationContainer: {
     marginTop: 16,
     paddingTop: 12,

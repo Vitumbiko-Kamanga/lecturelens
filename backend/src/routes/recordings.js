@@ -7,6 +7,7 @@ const crypto = require("crypto");
 
 const pool = require("../config/database");
 const requireAuth = require("../middleware/requireAuth");
+const { summarizeTranscript } = require("../services/geminiService");
 
 const router = express.Router();
 
@@ -197,7 +198,6 @@ router.get("/lecture/:lectureId", async (req, res) => {
   }
 });
 
-
 /**
  * Transcribe an existing recording using the local Whisper service.
  * Only the student who owns the recording can request transcription.
@@ -207,7 +207,6 @@ router.post("/:recordingId/transcribe", async (req, res) => {
     const { recordingId } = req.params;
     const userId = req.auth.userId;
 
-    // Find the recording and verify ownership.
     const recordingResult = await pool.query(
       `
         SELECT
@@ -234,7 +233,6 @@ router.post("/:recordingId/transcribe", async (req, res) => {
 
     const recording = recordingResult.rows[0];
 
-    // Ensure the stored path cannot escape the recordings directory.
     const recordingsDirectory = path.resolve(UPLOAD_DIR);
     const filePath = path.resolve(
       recordingsDirectory,
@@ -253,7 +251,6 @@ router.post("/:recordingId/transcribe", async (req, res) => {
       });
     }
 
-    // Send the saved audio to the local Python transcription service.
     const audioBuffer = await fs.promises.readFile(filePath);
     const formData = new FormData();
 
@@ -298,7 +295,6 @@ router.post("/:recordingId/transcribe", async (req, res) => {
       });
     }
 
-    // Save a new transcript or update the existing one for this recording.
     const savedResult = await pool.query(
       `
         INSERT INTO transcripts (
@@ -384,6 +380,70 @@ router.get("/:recordingId/transcript", async (req, res) => {
   }
 });
 
+/**
+ * Generate an AI-powered summary of a saved lecture transcript.
+ * Only the student who owns the recording can request a summary.
+ */
+router.post("/:recordingId/summarize", async (req, res) => {
+  try {
+    const { recordingId } = req.params;
+    const userId = req.auth.userId;
+
+    const transcriptResult = await pool.query(
+      `
+        SELECT
+          t.transcript,
+          r.title AS recording_title
+        FROM transcripts t
+        JOIN recordings r ON r.id = t.recording_id
+        JOIN lectures l ON l.id = r.lecture_id
+        JOIN modules m ON m.id = l.module_id
+        WHERE r.id = $1
+          AND r.user_id = $2
+          AND m.user_id = $2
+          AND t.user_id = $2
+      `,
+      [recordingId, userId]
+    );
+
+    if (transcriptResult.rowCount === 0) {
+      return res.status(404).json({
+        message:
+          "Transcript not found or you do not have access to this recording.",
+      });
+    }
+
+    const { transcript, recording_title } = transcriptResult.rows[0];
+
+    if (typeof transcript !== "string" || !transcript.trim()) {
+      return res.status(400).json({
+        message: "The saved transcript is empty.",
+      });
+    }
+
+    if (transcript.length > 100000) {
+      return res.status(413).json({
+        message:
+          "This transcript is too long to summarize in one request.",
+      });
+    }
+
+    const summary = await summarizeTranscript(transcript);
+
+    return res.json({
+      message: "Lecture summary generated successfully.",
+      recordingId,
+      recordingTitle: recording_title,
+      summary,
+    });
+  } catch (error) {
+    console.error("Lecture summarization error:", error);
+
+    return res.status(500).json({
+      message: "Could not generate the lecture summary.",
+    });
+  }
+});
 
 // Download a recording only if it belongs to the signed-in student.
 router.get("/:recordingId/file", async (req, res) => {

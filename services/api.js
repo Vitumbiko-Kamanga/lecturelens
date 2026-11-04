@@ -27,7 +27,6 @@ async function request(path, options = {}) {
       ...options.headers,
     };
 
-    // Attach a Clerk token only when one is available.
     if (token) {
       headers.Authorization = `Bearer ${token}`;
     }
@@ -84,7 +83,7 @@ async function uploadRecording(lectureId, audioUri, title) {
   const uriWithoutQuery = audioUri.split("?")[0];
 
   const extension =
-    uriWithoutQuery.match(/\.([a-zA-Z0-9]+)$/)?.[1]?.toLowerCase() ||
+    uriWithoutQuery.match(/\.(\w+)$/)?.[1]?.toLowerCase() ||
     "m4a";
 
   const mimeTypes = {
@@ -217,6 +216,15 @@ export const api = {
   getRecordingTranscript: (recordingId) =>
     request(
       `/api/recordings/${encodeURIComponent(recordingId)}/transcript`
+    ),
+
+  // AI lecture summarization
+  summarizeRecording: (recordingId) =>
+    request(
+      `/api/recordings/${encodeURIComponent(recordingId)}/summarize`,
+      {
+        method: "POST",
+      }
     ),
 
   deleteRecording: (recordingId) =>

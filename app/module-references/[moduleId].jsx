@@ -59,6 +59,7 @@ export default function ModuleReferences() {
   const [resourceType, setResourceType] = useState("book");
 
   const [resourceSaving, setResourceSaving] = useState(false);
+  const [deletingResourceId, setDeletingResourceId] = useState(null);
 
   const loadResources = useCallback(async () => {
     if (!moduleId) {
@@ -152,6 +153,62 @@ export default function ModuleReferences() {
     }
   }
 
+  function confirmDeleteResource(resource) {
+    if (!resource?.id) {
+      Alert.alert(
+        "Cannot delete resource",
+        "The resource ID is missing."
+      );
+      return;
+    }
+
+    Alert.alert(
+      "Delete resource",
+      `Are you sure you want to delete "${resource.title || "Untitled resource"}"? This action cannot be undone.`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => deleteResource(resource),
+        },
+      ]
+    );
+  }
+
+  async function deleteResource(resource) {
+    if (!resource?.id || deletingResourceId !== null) {
+      return;
+    }
+
+    setDeletingResourceId(resource.id);
+
+    try {
+      await api.deleteResource(resource.id);
+
+      setResources((previous) =>
+        previous.filter(
+          (item) => String(item.id) !== String(resource.id)
+        )
+      );
+
+      Alert.alert(
+        "Resource deleted",
+        "The resource has been removed successfully."
+      );
+    } catch (err) {
+      Alert.alert(
+        "Could not delete resource",
+        err.message || "Please try again."
+      );
+    } finally {
+      setDeletingResourceId(null);
+    }
+  }
+
   async function openResource(resource) {
     if (!resource.url) {
       Alert.alert(
@@ -184,6 +241,9 @@ export default function ModuleReferences() {
   }
 
   function renderResource(resource) {
+    const isDeleting =
+      String(deletingResourceId) === String(resource.id);
+
     return (
       <View
         key={resource.id}
@@ -262,6 +322,47 @@ export default function ModuleReferences() {
                 </Text>
               </TouchableOpacity>
             )}
+
+            <TouchableOpacity
+              onPress={() => confirmDeleteResource(resource)}
+              disabled={deletingResourceId !== null}
+              activeOpacity={0.7}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                alignSelf: "flex-start",
+                marginTop: 14,
+                paddingVertical: 8,
+                paddingHorizontal: 12,
+                borderRadius: 8,
+                backgroundColor: isDeleting
+                  ? "#F3F4F6"
+                  : "#FEF2F2",
+              }}
+            >
+              {isDeleting ? (
+                <ActivityIndicator
+                  size="small"
+                  color="#B42318"
+                />
+              ) : (
+                <Ionicons
+                  name="trash-outline"
+                  size={17}
+                  color="#B42318"
+                />
+              )}
+
+              <Text
+                style={{
+                  color: "#B42318",
+                  fontWeight: "600",
+                  marginLeft: 6,
+                }}
+              >
+                {isDeleting ? "Deleting..." : "Delete Resource"}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>

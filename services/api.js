@@ -15,7 +15,7 @@ async function request(path, options = {}) {
     const token = authTokenGetter
       ? await authTokenGetter()
       : null;
-    
+
     console.log("[LectureLens Auth Debug]", {
       path,
       getterRegistered: typeof authTokenGetter === "function",
@@ -56,20 +56,19 @@ async function request(path, options = {}) {
   }
 
   if (!response.ok) {
-  console.log("[LectureLens API Error]", {
-    path,
-    status: response.status,
-    message: data?.message,
-  });
+    console.log("[LectureLens API Error]", {
+      path,
+      status: response.status,
+      message: data?.message,
+    });
 
-  throw new Error(
-    data?.message || `Request failed with status ${response.status}`
-  );
-}
+    throw new Error(
+      data?.message || `Request failed with status ${response.status}`
+    );
+  }
 
   return data;
 }
-
 
 async function uploadRecording(lectureId, audioUri, title) {
   if (!authTokenGetter) {
@@ -83,6 +82,7 @@ async function uploadRecording(lectureId, audioUri, title) {
   }
 
   const uriWithoutQuery = audioUri.split("?")[0];
+
   const extension =
     uriWithoutQuery.match(/\.([a-zA-Z0-9]+)$/)?.[1]?.toLowerCase() ||
     "m4a";
@@ -147,7 +147,6 @@ async function uploadRecording(lectureId, audioUri, title) {
   return data;
 }
 
-
 async function getRecordingPlaybackSource(recordingId) {
   if (!authTokenGetter) {
     throw new Error("Authentication is not ready. Please sign in again.");
@@ -168,7 +167,6 @@ async function getRecordingPlaybackSource(recordingId) {
     },
   };
 }
-
 
 export const api = {
   // Connection checks
@@ -221,12 +219,10 @@ export const api = {
       `/api/recordings/${encodeURIComponent(recordingId)}/transcript`
     ),
 
-
   deleteRecording: (recordingId) =>
     request(`/api/recordings/${encodeURIComponent(recordingId)}`, {
       method: "DELETE",
     }),
-
 
   // Lectures
   listLectures: (moduleId) =>
@@ -266,12 +262,63 @@ export const api = {
     request(`/api/lectures/notes/${noteId}`, {
       method: "PUT",
       body: JSON.stringify(note),
-  }),
+    }),
 
   deleteNote: (noteId) =>
     request(`/api/lectures/notes/${noteId}`, {
       method: "DELETE",
     }),
+
+  // Academic reference search
+  searchAcademicReferences: async (query) => {
+    const trimmedQuery = query?.trim();
+
+    if (!trimmedQuery) {
+      return [];
+    }
+
+    const url =
+      `https://api.crossref.org/works?query.bibliographic=${encodeURIComponent(trimmedQuery)}&rows=10`;
+
+    let response;
+
+    try {
+      response = await fetch(url);
+    } catch (error) {
+      throw new Error(
+        "Unable to connect to the academic reference service. Check your internet connection."
+      );
+    }
+
+    if (!response.ok) {
+      throw new Error("Unable to search academic references.");
+    }
+
+    const data = await response.json();
+
+    return (data.message?.items || []).map((item) => ({
+      title: item.title?.[0] || "Untitled publication",
+
+      authors: (item.author || [])
+        .map((author) =>
+          [author.given, author.family].filter(Boolean).join(" ")
+        )
+        .filter(Boolean)
+        .join(", "),
+
+      year:
+        item.published?.["date-parts"]?.[0]?.[0] ||
+        item["published-print"]?.["date-parts"]?.[0]?.[0] ||
+        item["published-online"]?.["date-parts"]?.[0]?.[0] ||
+        "Year unavailable",
+
+      doi: item.DOI || null,
+
+      url: item.DOI
+        ? `https://doi.org/${item.DOI}`
+        : item.URL || null,
+    }));
+  },
 
   // Further reading resources
   listResources: (moduleId) =>

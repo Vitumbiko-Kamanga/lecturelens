@@ -7,11 +7,14 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Linking,
 } from "react-native";
+
 import {
   useAudioPlayer,
   useAudioPlayerStatus,
 } from "expo-audio";
+
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "../../services/api";
 
@@ -38,6 +41,44 @@ function formatSize(bytes) {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+// Detect possible author-year citations in lecture transcripts.
+function detectCitationCandidates(transcript = "") {
+  if (!transcript || typeof transcript !== "string") {
+    return [];
+  }
+
+  const patterns = [
+    /\b([A-Z][a-zA-Z'-]+)\s*\((\d{4})\)/g,
+    /\b([A-Z][a-zA-Z'-]+)\s+et\s+al\.?\s*\((\d{4})\)/g,
+    /\b([A-Z][a-zA-Z'-]+),?\s+et\s+al\.?,?\s+(\d{4})\b/g,
+  ];
+
+  const candidates = [];
+  const seen = new Set();
+
+  for (const pattern of patterns) {
+    let match;
+
+    while ((match = pattern.exec(transcript)) !== null) {
+      const author = match[1];
+      const year = match[2];
+      const key = `${author.toLowerCase()}-${year}`;
+
+      if (!seen.has(key)) {
+        seen.add(key);
+
+        candidates.push({
+          author,
+          year,
+          query: `${author} ${year}`,
+        });
+      }
+    }
+  }
+
+  return candidates;
+}
+
 export default function LectureRecordings({ lectureId }) {
   const player = useAudioPlayer(null);
   const status = useAudioPlayerStatus(player);
@@ -53,11 +94,17 @@ export default function LectureRecordings({ lectureId }) {
   const [transcriptLoadingId, setTranscriptLoadingId] = useState(null);
   const [expandedTranscriptId, setExpandedTranscriptId] = useState(null);
 
+  // Citation detection and academic search states.
+  const [citationCandidates, setCitationCandidates] = useState({});
+  const [citationResults, setCitationResults] = useState({});
+  const [citationSearchLoading, setCitationSearchLoading] = useState(null);
+
   const loadRecordings = useCallback(async () => {
     try {
       setError("");
 
       const result = await api.listRecordings(lectureId);
+
       const items = Array.isArray(result)
         ? result
         : result?.recordings || [];
@@ -82,7 +129,6 @@ export default function LectureRecordings({ lectureId }) {
       setBusyId(String(recording.id));
       setError("");
 
-      // Pause the currently playing recording when the same item is selected.
       if (String(playingId) === String(recording.id)) {
         if (status.playing) {
           player.pause();
@@ -93,12 +139,13 @@ export default function LectureRecordings({ lectureId }) {
         return;
       }
 
-      // The API returns a protected audio URL with the Clerk bearer token.
       const source = await api.getRecordingPlaybackSource(recording.id);
 
       player.pause();
       player.replace(source);
+
       setPlayingId(String(recording.id));
+
       player.play();
     } catch (err) {
       setError(err.message || "Could not play this recording.");
@@ -128,8 +175,27 @@ export default function LectureRecordings({ lectureId }) {
         [recordingId]: transcript,
       }));
 
+      // Detect possible citations in the newly generated transcript.
+      const candidates = detectCitationCandidates(transcript);
+
+      setCitationCandidates((previous) => ({
+        ...previous,
+        [recordingId]: candidates,
+      }));
+
+      setCitationResults((previous) => ({
+        ...previous,
+        [recordingId]: {},
+      }));
+
       setExpandedTranscriptId(recordingId);
-      Alert.alert("Transcription complete", "Your transcript has been saved.");
+
+      Alert.alert(
+        "Transcription complete",
+        candidates.length > 0
+          ? `Transcript saved. Found ${candidates.length} possible citation(s).`
+          : "Transcript saved. No author-year citations were detected."
+      );
     } catch (err) {
       setError(err.message || "Could not transcribe this recording.");
     } finally {
@@ -163,6 +229,14 @@ export default function LectureRecordings({ lectureId }) {
         [recordingId]: transcript,
       }));
 
+      // Detect citations when loading an existing transcript too.
+      const candidates = detectCitationCandidates(transcript);
+
+      setCitationCandidates((previous) => ({
+        ...previous,
+        [recordingId]: candidates,
+      }));
+
       setExpandedTranscriptId(recordingId);
     } catch (err) {
       setError(err.message || "Could not load the transcript.");
@@ -171,6 +245,55 @@ export default function LectureRecordings({ lectureId }) {
     }
   }
 
+  // Search Crossref for a detected citation.
+  async function handleSearchCitation(recordingId, citation) {
+    const citationKey = `${citation.author}-${citation.year}`;
+
+    if (citationSearchLoading) return;
+
+    try {
+      setCitationSearchLoading(citationKey);
+
+      const results = await api.searchAcademicReferences(
+        citation.query
+      );
+
+      setCitationResults((previous) => ({
+        ...previous,
+        [recordingId]: {
+          ...(previous[recordingId] || {}),
+          [citationKey]: results,
+        },
+      }));
+
+      if (results.length === 0) {
+        Alert.alert(
+          "No publications found",
+          `No matching publications were found for ${citation.author} (${citation.year}).`
+        );
+      }
+    } catch (err) {
+      Alert.alert(
+        "Reference search failed",
+        err.message || "Could not search for this citation."
+      );
+    } finally {
+      setCitationSearchLoading(null);
+    }
+  }
+
+  async function openReference(url) {
+    if (!url) return;
+
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert(
+        "Unable to open publication",
+        "Could not open the publication link."
+      );
+    }
+  }
 
   function confirmDelete(recording) {
     Alert.alert(
@@ -215,6 +338,7 @@ export default function LectureRecordings({ lectureId }) {
   const isLoaded = Boolean(status.isLoaded);
   const duration = Number(status.duration) || 0;
   const currentTime = Number(status.currentTime) || 0;
+
   const progress =
     duration > 0
       ? Math.min(100, (currentTime / duration) * 100)
@@ -223,8 +347,14 @@ export default function LectureRecordings({ lectureId }) {
   return (
     <View style={styles.container}>
       <View style={styles.headingRow}>
-        <Ionicons name="musical-notes-outline" size={19} color={NAVY} />
+        <Ionicons
+          name="musical-notes-outline"
+          size={19}
+          color={NAVY}
+        />
+
         <Text style={styles.heading}>Lecture recordings</Text>
+
         <View style={styles.countBadge}>
           <Text style={styles.countText}>{recordings.length}</Text>
         </View>
@@ -235,6 +365,7 @@ export default function LectureRecordings({ lectureId }) {
       ) : error && recordings.length === 0 ? (
         <View style={styles.messageBox}>
           <Text style={styles.errorText}>{error}</Text>
+
           <TouchableOpacity onPress={loadRecordings}>
             <Text style={styles.retryText}>Try again</Text>
           </TouchableOpacity>
@@ -245,8 +376,13 @@ export default function LectureRecordings({ lectureId }) {
         </Text>
       ) : (
         recordings.map((recording) => {
-          const selected =
-            String(playingId) === String(recording.id);
+          const recordingId = String(recording.id);
+
+          const selected = recordingId === String(playingId);
+
+          const transcript = transcripts[recordingId];
+
+          const candidates = citationCandidates[recordingId] || [];
 
           return (
             <View key={recording.id} style={styles.recordingCard}>
@@ -299,7 +435,7 @@ export default function LectureRecordings({ lectureId }) {
                       : "Play recording"
                   }
                 >
-                  {busyId === String(recording.id) ? (
+                  {busyId === recordingId ? (
                     <ActivityIndicator color="#FFFFFF" size="small" />
                   ) : (
                     <Ionicons
@@ -330,102 +466,224 @@ export default function LectureRecordings({ lectureId }) {
                     <Text style={styles.timeText}>
                       {selected ? formatTime(currentTime) : "0:00"}
                     </Text>
+
                     <Text style={styles.timeText}>
                       {selected && isLoaded
                         ? formatTime(duration)
                         : "Audio"}
                     </Text>
                   </View>
-  <View style={styles.transcriptionActions}>
-    <TouchableOpacity
-      style={styles.transcribeButton}
-      onPress={() => handleTranscribe(recording)}
-      disabled={Boolean(transcribingId || transcriptLoadingId || busyId)}
-    >
-      {transcribingId === String(recording.id) ? (
-        <ActivityIndicator color="#FFFFFF" size="small" />
-      ) : (
-        <Ionicons name="text-outline" size={17} color="#FFFFFF" />
-      )}
-      <Text style={styles.transcribeButtonText}>
-        {transcribingId === String(recording.id)
-          ? "Transcribing..."
-          : "Transcribe"}
-      </Text>
-    </TouchableOpacity>
-
-    <TouchableOpacity
-      style={styles.viewTranscriptButton}
-      onPress={() => handleViewTranscript(recording)}
-      disabled={Boolean(transcribingId || transcriptLoadingId || busyId)}
-    >
-      {transcriptLoadingId === String(recording.id) ? (
-        <ActivityIndicator color={NAVY} size="small" />
-      ) : (
-        <Ionicons
-          name="document-text-outline"
-          size={17}
-          color={NAVY}
-        />
-      )}
-      <Text style={styles.viewTranscriptButtonText}>
-        {expandedTranscriptId === String(recording.id)
-          ? "Hide transcript"
-          : "View transcript"}
-      </Text>
-    </TouchableOpacity>
-  </View>
-
-  {expandedTranscriptId === String(recording.id) &&
-    transcripts[String(recording.id)] && (
-      <View style={styles.transcriptCard}>
-        <Text style={styles.transcriptHeading}>Transcript</Text>
-
-        <Text style={styles.transcriptMetadata}>
-          Language: {transcripts[String(recording.id)].language || "Unknown"}
-          {transcripts[String(recording.id)].duration_seconds != null
-            ? `  ·  ${formatTime(
-                transcripts[String(recording.id)].duration_seconds
-              )}`
-            : ""}
-        </Text>
-
-        <Text style={styles.transcriptText}>
-          {transcripts[String(recording.id)].transcript ||
-            "No speech was recognized in this recording."}
-        </Text>
-
-        {Array.isArray(transcripts[String(recording.id)].segments) &&
-          transcripts[String(recording.id)].segments.length > 0 && (
-            <View style={styles.segmentsContainer}>
-              <Text style={styles.segmentsHeading}>
-                Timestamped segments
-              </Text>
-
-              {transcripts[String(recording.id)].segments.map(
-                (segment, index) => (
-                  <View
-                    key={`${recording.id}-segment-${index}`}
-                    style={styles.segmentRow}
-                  >
-                    <Text style={styles.segmentTime}>
-                      {formatTime(segment.start)}
-                    </Text>
-                    <Text style={styles.segmentText}>
-                      {segment.text}
-                    </Text>
-                  </View>
-                )
-              )}
-            </View>
-          )}
-      </View>
-    )}
-
                 </View>
               </View>
-            </View>
 
+              {/* Transcription actions */}
+              <View style={styles.transcriptionActions}>
+                <TouchableOpacity
+                  style={styles.transcribeButton}
+                  onPress={() => handleTranscribe(recording)}
+                  disabled={Boolean(
+                    transcribingId || transcriptLoadingId || busyId
+                  )}
+                >
+                  {transcribingId === recordingId ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <Ionicons
+                      name="text-outline"
+                      size={17}
+                      color="#FFFFFF"
+                    />
+                  )}
+
+                  <Text style={styles.transcribeButtonText}>
+                    {transcribingId === recordingId
+                      ? "Transcribing..."
+                      : "Transcribe"}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.viewTranscriptButton}
+                  onPress={() => handleViewTranscript(recording)}
+                  disabled={Boolean(
+                    transcribingId || transcriptLoadingId || busyId
+                  )}
+                >
+                  {transcriptLoadingId === recordingId ? (
+                    <ActivityIndicator color={NAVY} size="small" />
+                  ) : (
+                    <Ionicons
+                      name="document-text-outline"
+                      size={17}
+                      color={NAVY}
+                    />
+                  )}
+
+                  <Text style={styles.viewTranscriptButtonText}>
+                    {expandedTranscriptId === recordingId
+                      ? "Hide transcript"
+                      : "View transcript"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Transcript display */}
+              {expandedTranscriptId === recordingId && transcript && (
+                <View style={styles.transcriptCard}>
+                  <Text style={styles.transcriptHeading}>
+                    Transcript
+                  </Text>
+
+                  <Text style={styles.transcriptMetadata}>
+                    Language: {transcript.language || "Unknown"}
+                    {transcript.duration_seconds != null
+                      ? `  ·  ${formatTime(transcript.duration_seconds)}`
+                      : ""}
+                  </Text>
+
+                  <Text style={styles.transcriptText}>
+                    {transcript.transcript ||
+                      "No speech was recognized in this recording."}
+                  </Text>
+
+                  {/* Timestamped segments */}
+                  {Array.isArray(transcript.segments) &&
+                    transcript.segments.length > 0 && (
+                      <View style={styles.segmentsContainer}>
+                        <Text style={styles.segmentsHeading}>
+                          Timestamped segments
+                        </Text>
+
+                        {transcript.segments.map((segment, index) => (
+                          <View
+                            key={`${recording.id}-segment-${index}`}
+                            style={styles.segmentRow}
+                          >
+                            <Text style={styles.segmentTime}>
+                              {formatTime(segment.start)}
+                            </Text>
+
+                            <Text style={styles.segmentText}>
+                              {segment.text}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+
+                  {/* Citation detection */}
+                  <View style={styles.citationContainer}>
+                    <View style={styles.citationHeadingRow}>
+                      <Ionicons
+                        name="book-outline"
+                        size={19}
+                        color={NAVY}
+                      />
+
+                      <Text style={styles.citationHeading}>
+                        Possible academic references
+                      </Text>
+                    </View>
+
+                    {candidates.length === 0 ? (
+                      <Text style={styles.citationEmptyText}>
+                        No author-year citations were detected.
+                        Try searching for references manually in the
+                        References screen.
+                      </Text>
+                    ) : (
+                      <>
+                        <Text style={styles.citationDescription}>
+                          These are possible citations detected in the
+                          transcript. Verify the results before using
+                          them in your academic work.
+                        </Text>
+
+                        {candidates.map((citation, index) => {
+                          const citationKey =
+                            `${citation.author}-${citation.year}`;
+
+                          const results =
+                            citationResults[recordingId]?.[citationKey];
+
+                          return (
+                            <View
+                              key={`${citationKey}-${index}`}
+                              style={styles.citationCard}
+                            >
+                              <Text style={styles.citationAuthor}>
+                                {citation.author} ({citation.year})
+                              </Text>
+
+                              <TouchableOpacity
+                                style={styles.citationSearchButton}
+                                onPress={() =>
+                                  handleSearchCitation(
+                                    recordingId,
+                                    citation
+                                  )
+                                }
+                                disabled={Boolean(citationSearchLoading)}
+                              >
+                                {citationSearchLoading === citationKey ? (
+                                  <ActivityIndicator
+                                    color="#FFFFFF"
+                                    size="small"
+                                  />
+                                ) : (
+                                  <Ionicons
+                                    name="search-outline"
+                                    size={16}
+                                    color="#FFFFFF"
+                                  />
+                                )}
+
+                                <Text style={styles.citationSearchButtonText}>
+                                  Search publication
+                                </Text>
+                              </TouchableOpacity>
+
+                              {/* Academic search results */}
+                              {Array.isArray(results) &&
+                                results.map((reference, resultIndex) => (
+                                  <TouchableOpacity
+                                    key={
+                                      reference.doi ||
+                                      `${reference.title}-${resultIndex}`
+                                    }
+                                    style={styles.referenceResult}
+                                    onPress={() =>
+                                      openReference(reference.url)
+                                    }
+                                    disabled={!reference.url}
+                                  >
+                                    <Text style={styles.referenceTitle}>
+                                      {reference.title}
+                                    </Text>
+
+                                    <Text style={styles.referenceMetadata}>
+                                      {reference.authors ||
+                                        "Authors unavailable"}
+                                    </Text>
+
+                                    <Text style={styles.referenceMetadata}>
+                                      Year: {reference.year}
+                                    </Text>
+
+                                    <Text style={styles.referenceLink}>
+                                      View publication
+                                    </Text>
+                                  </TouchableOpacity>
+                                ))}
+                            </View>
+                          );
+                        })}
+                      </>
+                    )}
+                  </View>
+                </View>
+              )}
+            </View>
           );
         })
       )}
@@ -439,8 +697,15 @@ export default function LectureRecordings({ lectureId }) {
         onPress={loadRecordings}
         disabled={loading}
       >
-        <Ionicons name="refresh-outline" size={16} color={NAVY} />
-        <Text style={styles.refreshText}>Refresh recordings</Text>
+        <Ionicons
+          name="refresh-outline"
+          size={16}
+          color={NAVY}
+        />
+
+        <Text style={styles.refreshText}>
+          Refresh recordings
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -455,50 +720,60 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5EAF0",
   },
+
   headingRow: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 12,
     gap: 7,
   },
+
   heading: {
     color: NAVY,
     fontSize: 15,
     fontWeight: "700",
   },
+
   countBadge: {
     backgroundColor: "#FFF4D6",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 12,
   },
+
   countText: {
     color: NAVY,
     fontWeight: "700",
     fontSize: 12,
   },
+
   loader: {
     marginVertical: 16,
   },
+
   messageBox: {
     paddingVertical: 8,
   },
+
   emptyText: {
     color: MUTED,
     fontSize: 13,
     lineHeight: 20,
     paddingVertical: 6,
   },
+
   errorText: {
     color: RED,
     fontSize: 12,
     marginVertical: 6,
   },
+
   retryText: {
     color: NAVY,
     fontWeight: "700",
     marginTop: 8,
   },
+
   recordingCard: {
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
@@ -507,11 +782,13 @@ const styles = StyleSheet.create({
     padding: 11,
     marginBottom: 9,
   },
+
   recordingTop: {
     flexDirection: "row",
     alignItems: "center",
     gap: 9,
   },
+
   audioIcon: {
     height: 39,
     width: 39,
@@ -520,28 +797,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   recordingInfo: {
     flex: 1,
   },
+
   recordingTitle: {
     color: "#101828",
     fontSize: 13,
     fontWeight: "700",
   },
+
   metadata: {
     color: MUTED,
     fontSize: 11,
     marginTop: 4,
   },
+
   deleteButton: {
     padding: 7,
   },
+
   controlsRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 11,
     marginTop: 12,
   },
+
   playButton: {
     width: 38,
     height: 38,
@@ -550,29 +833,35 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   progressArea: {
     flex: 1,
   },
+
   progressTrack: {
     height: 5,
     backgroundColor: "#E4E7EC",
     borderRadius: 5,
     overflow: "hidden",
   },
+
   progressFill: {
     height: 5,
     backgroundColor: GOLD,
     borderRadius: 5,
   },
+
   timeRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginTop: 5,
   },
+
   timeText: {
     color: MUTED,
     fontSize: 11,
   },
+
   refreshButton: {
     flexDirection: "row",
     justifyContent: "center",
@@ -581,16 +870,19 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     marginTop: 2,
   },
+
   refreshText: {
     color: NAVY,
     fontWeight: "600",
     fontSize: 12,
   },
+
   transcriptionActions: {
     flexDirection: "row",
     gap: 8,
     marginTop: 12,
   },
+
   transcribeButton: {
     flex: 1,
     flexDirection: "row",
@@ -602,11 +894,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: NAVY,
   },
+
   transcribeButtonText: {
     color: "#FFFFFF",
     fontSize: 12,
     fontWeight: "700",
   },
+
   viewTranscriptButton: {
     flex: 1,
     flexDirection: "row",
@@ -620,11 +914,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: GOLD,
   },
+
   viewTranscriptButtonText: {
     color: NAVY,
     fontSize: 12,
     fontWeight: "700",
   },
+
   transcriptCard: {
     marginTop: 12,
     padding: 12,
@@ -633,46 +929,54 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#D0D5DD",
   },
+
   transcriptHeading: {
     color: NAVY,
     fontSize: 15,
     fontWeight: "700",
   },
+
   transcriptMetadata: {
     color: MUTED,
     fontSize: 11,
     marginTop: 5,
     marginBottom: 10,
   },
+
   transcriptText: {
     color: "#101828",
     fontSize: 13,
     lineHeight: 21,
   },
+
   segmentsContainer: {
     marginTop: 14,
     paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: "#E5EAF0",
   },
+
   segmentsHeading: {
     color: NAVY,
     fontSize: 12,
     fontWeight: "700",
     marginBottom: 8,
   },
+
   segmentRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 10,
     marginBottom: 9,
   },
+
   segmentTime: {
     minWidth: 40,
     color: NAVY,
     fontSize: 11,
     fontWeight: "700",
   },
+
   segmentText: {
     flex: 1,
     color: "#344054",
@@ -680,4 +984,100 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
 
+  // Citation detection styles
+  citationContainer: {
+    marginTop: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#E5EAF0",
+  },
+
+  citationHeadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    marginBottom: 8,
+  },
+
+  citationHeading: {
+    color: NAVY,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  citationDescription: {
+    color: MUTED,
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+
+  citationEmptyText: {
+    color: MUTED,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+
+  citationCard: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5EAF0",
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 9,
+  },
+
+  citationAuthor: {
+    color: NAVY,
+    fontWeight: "700",
+    fontSize: 13,
+    marginBottom: 8,
+  },
+
+  citationSearchButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: NAVY,
+    borderRadius: 7,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
+    alignSelf: "flex-start",
+  },
+
+  citationSearchButtonText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+
+  referenceResult: {
+    marginTop: 10,
+    padding: 10,
+    borderRadius: 7,
+    backgroundColor: "#FFF9EA",
+    borderWidth: 1,
+    borderColor: "#F2B544",
+  },
+
+  referenceTitle: {
+    color: NAVY,
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 19,
+  },
+
+  referenceMetadata: {
+    color: MUTED,
+    fontSize: 11,
+    marginTop: 5,
+  },
+
+  referenceLink: {
+    color: NAVY,
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 8,
+  },
 });

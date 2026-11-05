@@ -1,30 +1,29 @@
 import React from "react";
-import { View, Text } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 import styles from "../../styles/settingsStyles";
-import {Ionicons} from "@expo/vector-icons";
 
 export default function SettingsHeader() {
+  const router = useRouter();
 
-    return (
+  return (
+    <View style={styles.header}>
+      <TouchableOpacity
+        onPress={() => router.back()}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="Go back"
+      >
+        <Ionicons
+          name="arrow-back-outline"
+          size={25}
+          color="#FFFFFF"
+        />
+      </TouchableOpacity>
 
-        <View style={styles.header}>
-            <Ionicons 
-                name="arrow-back-outline"
-                size={22}
-                color="#FFF"
-                weight=""
-
-            />
-            <Text style={styles.title}>
-                Settings
-            </Text>
-            {/* <Text style={styles.subtitle}>
-                Manage your preferences
-            </Text> */}
-
-        </View>
-
-    );
-
+      <Text style={styles.title}>Settings</Text>
+    </View>
+  );
 }

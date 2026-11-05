@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useRef } from "react";
 import { View, ScrollView } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 
@@ -14,6 +14,7 @@ import styles from "../styles/notesStyles";
 
 export default function Notes() {
   const params = useLocalSearchParams();
+  const scrollRef = useRef(null);
 
   const moduleId = Array.isArray(params.moduleId)
     ? params.moduleId[0]
@@ -23,11 +24,23 @@ export default function Notes() {
     ? params.lectureId[0]
     : params.lectureId;
 
+  const handleSelectedLectureChange = useCallback((selection) => {
+    if (!selection) return;
+
+    // Wait for the selected lecture details to render before scrolling.
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollToEnd({
+        animated: true,
+      });
+    });
+  }, []);
+
   return (
     <View style={styles.main}>
       <HomeHeader userName="Vitumbiko" />
 
       <ScrollView
+        ref={scrollRef}
         style={styles.container}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
@@ -39,6 +52,7 @@ export default function Notes() {
         <ModulesSection
           initialModuleId={moduleId}
           initialLectureId={lectureId}
+          onSelectedLectureChange={handleSelectedLectureChange}
         />
       </ScrollView>
 

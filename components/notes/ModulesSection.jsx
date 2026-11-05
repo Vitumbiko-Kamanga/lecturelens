@@ -1,4 +1,3 @@
-
 import React, {
   useCallback,
   useEffect,
@@ -8,10 +7,13 @@ import React, {
 import {
   ActivityIndicator,
   Alert,
+  LayoutAnimation,
   Linking,
+  Platform,
   Text,
   TextInput,
   TouchableOpacity,
+  UIManager,
   View,
 } from "react-native";
 import { api } from "../../services/api";
@@ -28,6 +30,13 @@ const RESOURCE_TYPES = [
   "video",
   "other",
 ];
+
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 function getItems(result, key) {
   if (Array.isArray(result)) return result;
@@ -58,8 +67,6 @@ export default function ModulesSection({
   const [resourceUrl, setResourceUrl] = useState("");
   const [resourceType, setResourceType] = useState("book");
   const [resourceSaving, setResourceSaving] = useState(false);
-
-  // Controls which module's resource form is visible.
   const [resourceFormModuleId, setResourceFormModuleId] = useState(null);
 
   const [transcriptsByRecording, setTranscriptsByRecording] = useState({});
@@ -75,6 +82,7 @@ export default function ModulesSection({
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [editingNoteId, setEditingNoteId] = useState(null);
+  const [noteFormOpen, setNoteFormOpen] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [lecturesLoading, setLecturesLoading] = useState(false);
@@ -100,7 +108,6 @@ export default function ModulesSection({
     loadModules();
   }, [loadModules]);
 
-  // Load resources belonging to one module.
   const loadModuleResources = useCallback(async (moduleId) => {
     setResourcesLoading((previous) => ({
       ...previous,
@@ -132,10 +139,19 @@ export default function ModulesSection({
     }
   }, []);
 
-  // Open a lecture and notify the Notes screen about its module and title.
   const openLecture = useCallback(
     async (lecture, moduleName) => {
+      LayoutAnimation.configureNext(
+        LayoutAnimation.Presets.easeInEaseOut
+      );
+
       setSelectedLecture(lecture);
+
+      // A new lecture starts with a closed, empty note editor.
+      setNoteFormOpen(false);
+      setTitle("");
+      setContent("");
+      setEditingNoteId(null);
 
       onSelectedLectureChange?.({
         moduleName: moduleName || "Unknown module",
@@ -179,7 +195,7 @@ export default function ModulesSection({
     [onSelectedLectureChange]
   );
 
-  // Automatically open the lecture requested by the Home screen.
+  // Automatically open a lecture requested by the Home screen.
   useEffect(() => {
     if (
       initialModuleId == null ||
@@ -263,15 +279,21 @@ export default function ModulesSection({
   ]);
 
   async function toggleModule(module) {
+    LayoutAnimation.configureNext(
+      LayoutAnimation.Presets.easeInEaseOut
+    );
+
     if (expandedModule === module.id) {
       setExpandedModule(null);
       setSelectedLecture(null);
       setNotes([]);
       setRecordings([]);
+      setNoteFormOpen(false);
+      setTitle("");
+      setContent("");
+      setEditingNoteId(null);
 
-      // Clear the selected lecture banner.
       onSelectedLectureChange?.(null);
-
       return;
     }
 
@@ -279,8 +301,11 @@ export default function ModulesSection({
     setSelectedLecture(null);
     setNotes([]);
     setRecordings([]);
+    setNoteFormOpen(false);
+    setTitle("");
+    setContent("");
+    setEditingNoteId(null);
 
-    // Clear the previous selection when switching modules.
     onSelectedLectureChange?.(null);
 
     setLecturesLoading(true);
@@ -303,7 +328,6 @@ export default function ModulesSection({
     }
   }
 
-  // Reset the resource form.
   function resetResourceForm() {
     setResourceTitle("");
     setResourceAuthor("");
@@ -311,7 +335,6 @@ export default function ModulesSection({
     setResourceType("book");
   }
 
-  // Toggle the resource form for a particular module.
   function toggleResourceForm(moduleId) {
     if (String(resourceFormModuleId) === String(moduleId)) {
       setResourceFormModuleId(null);
@@ -323,13 +346,11 @@ export default function ModulesSection({
     resetResourceForm();
   }
 
-  // Cancel resource entry and hide the form.
   function cancelResourceForm() {
     setResourceFormModuleId(null);
     resetResourceForm();
   }
 
-  // Add a resource to the currently expanded module.
   async function saveResource(moduleId) {
     if (!resourceTitle.trim()) {
       Alert.alert("Resource title required", "Enter the resource title.");
@@ -338,10 +359,7 @@ export default function ModulesSection({
 
     const cleanUrl = resourceUrl.trim();
 
-    if (
-      cleanUrl &&
-      !/^https?:\/\/\S+$/i.test(cleanUrl)
-    ) {
+    if (cleanUrl && !/^https?:\/\/\S+$/i.test(cleanUrl)) {
       Alert.alert(
         "Invalid URL",
         "Enter a valid link beginning with https:// or http://."
@@ -374,7 +392,6 @@ export default function ModulesSection({
         await loadModuleResources(moduleId);
       }
 
-      // Clear the form and close it after successful saving.
       resetResourceForm();
       setResourceFormModuleId(null);
 
@@ -657,9 +674,14 @@ export default function ModulesSection({
         Alert.alert("Saved", "Your note has been saved.");
       }
 
+      LayoutAnimation.configureNext(
+        LayoutAnimation.Presets.easeInEaseOut
+      );
+
       setTitle("");
       setContent("");
       setEditingNoteId(null);
+      setNoteFormOpen(false);
     } catch (err) {
       Alert.alert(
         editingNoteId !== null ? "Could not update note" : "Could not save note",
@@ -671,15 +693,25 @@ export default function ModulesSection({
   }
 
   function editNote(note) {
+    LayoutAnimation.configureNext(
+      LayoutAnimation.Presets.easeInEaseOut
+    );
+
     setEditingNoteId(note.id);
     setTitle(note.title || "");
     setContent(note.content || "");
+    setNoteFormOpen(true);
   }
 
   function cancelEdit() {
+    LayoutAnimation.configureNext(
+      LayoutAnimation.Presets.easeInEaseOut
+    );
+
     setEditingNoteId(null);
     setTitle("");
     setContent("");
+    setNoteFormOpen(false);
   }
 
   function confirmDelete(note) {
@@ -692,7 +724,9 @@ export default function ModulesSection({
           try {
             await api.deleteNote(note.id);
             setNotes((previous) =>
-              previous.filter((item) => item.id !== note.id)
+              previous.filter(
+                (item) => String(item.id) !== String(note.id)
+              )
             );
           } catch (err) {
             Alert.alert("Could not delete note", err.message);
@@ -776,27 +810,31 @@ export default function ModulesSection({
                       Modules & Lectures on the Home screen.
                     </Text>
                   ) : (
-                    moduleLectures.map((lecture) => (
-                      <TouchableOpacity
-                        key={lecture.id}
-                        onPress={() => openLecture(lecture, module.name)}
-                        style={[
-                          styles.lectureButton,
-                          String(selectedLecture?.id) === String(lecture.id) &&
-                            styles.selectedLecture,
-                        ]}
-                      >
-                        <Text style={styles.lectureTitle}>
-                          {lecture.title || "Untitled lecture"}
-                        </Text>
+                    moduleLectures.map((lecture) => {
+                      const isLectureSelected =
+                        String(selectedLecture?.id) === String(lecture.id);
 
-                        <Text style={styles.muted}>
-                          {String(selectedLecture?.id) === String(lecture.id)
-                            ? "Selected"
-                            : "View notes"}
-                        </Text>
-                      </TouchableOpacity>
-                    ))
+                      return (
+                        <TouchableOpacity
+                          key={lecture.id}
+                          onPress={() => openLecture(lecture, module.name)}
+                          style={[
+                            styles.lectureButton,
+                            isLectureSelected && styles.selectedLecture,
+                          ]}
+                        >
+                          <Text style={styles.lectureTitle}>
+                            {lecture.title || "Untitled lecture"}
+                          </Text>
+
+                          <Text style={styles.muted}>
+                            {isLectureSelected
+                              ? "✓ Selected — view lecture details below"
+                              : "Tap to view notes"}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })
                   )}
 
                   {/* Learning resources for this module */}
@@ -874,7 +912,6 @@ export default function ModulesSection({
                       ))
                     )}
 
-                    {/* Add Learning Resources button */}
                     <TouchableOpacity
                       onPress={() => toggleResourceForm(module.id)}
                       style={styles.addResourceButton}
@@ -887,7 +924,6 @@ export default function ModulesSection({
                       </Text>
                     </TouchableOpacity>
 
-                    {/* Collapsible resource form */}
                     {isResourceFormOpen && (
                       <View style={styles.resourceForm}>
                         <Text style={styles.resourceFormTitle}>
@@ -989,8 +1025,10 @@ export default function ModulesSection({
 
       {selectedLecture && (
         <View style={styles.notesPanel}>
-          <Text style={styles.panelTitle}>Notes</Text>
-          <Text style={styles.muted}>{selectedLecture.title}</Text>
+          <Text style={styles.panelTitle}>Lecture Details & Notes</Text>
+          <Text style={styles.selectedLectureTitle}>
+            {selectedLecture.title || "Untitled lecture"}
+          </Text>
 
           <Text style={styles.panelTitle}>Recordings & transcripts</Text>
 
@@ -1173,60 +1211,85 @@ export default function ModulesSection({
             })
           )}
 
-          <Text style={styles.label}>Note title</Text>
-          <TextInput
-            value={title}
-            onChangeText={setTitle}
-            placeholder="e.g. Key concepts"
-            style={styles.input}
-          />
-
-          <Text style={styles.label}>Note content</Text>
-          <TextInput
-            value={content}
-            onChangeText={setContent}
-            placeholder="Write your lecture notes here..."
-            multiline
-            textAlignVertical="top"
-            style={[styles.input, styles.textArea]}
-          />
-
+          {/* Add Note / Hide Note Editor */}
           <TouchableOpacity
-            onPress={saveNote}
+            onPress={() => {
+              LayoutAnimation.configureNext(
+                LayoutAnimation.Presets.easeInEaseOut
+              );
+
+              if (noteFormOpen) {
+                cancelEdit();
+              } else {
+                setTitle("");
+                setContent("");
+                setEditingNoteId(null);
+                setNoteFormOpen(true);
+              }
+            }}
             disabled={saving}
-            style={[styles.saveButton, saving && { opacity: 0.6 }]}
+            style={styles.addNoteButton}
           >
-            <Text style={styles.saveButtonText}>
-              {saving
-                ? editingNoteId !== null
-                  ? "Updating..."
-                  : "Saving..."
-                : editingNoteId !== null
-                  ? "Update Note"
-                  : "Save Note"}
+            <Text style={styles.addNoteButtonText}>
+              {noteFormOpen ? "− Hide Note Editor" : "+ Add Note"}
             </Text>
           </TouchableOpacity>
 
-          {editingNoteId !== null && (
-            <TouchableOpacity
-              onPress={cancelEdit}
-              disabled={saving}
-              style={{
-                padding: 12,
-                alignItems: "center",
-                marginTop: -12,
-                marginBottom: 12,
-              }}
-            >
-              <Text style={{ color: NAVY, fontWeight: "600" }}>
-                Cancel Editing
+          {/* Collapsible note editor */}
+          {noteFormOpen && (
+            <View style={styles.noteForm}>
+              <Text style={styles.noteFormTitle}>
+                {editingNoteId !== null
+                  ? "Edit lecture note"
+                  : "Create a lecture note"}
               </Text>
-            </TouchableOpacity>
+
+              <Text style={styles.label}>Note title *</Text>
+              <TextInput
+                value={title}
+                onChangeText={setTitle}
+                placeholder="e.g. Key concepts"
+                style={styles.input}
+              />
+
+              <Text style={styles.label}>Note content *</Text>
+              <TextInput
+                value={content}
+                onChangeText={setContent}
+                placeholder="Write your lecture notes here..."
+                multiline
+                textAlignVertical="top"
+                style={[styles.input, styles.textArea]}
+              />
+
+              <TouchableOpacity
+                onPress={saveNote}
+                disabled={saving}
+                style={[
+                  styles.saveButton,
+                  saving && { opacity: 0.6 },
+                ]}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.saveButtonText}>
+                    {editingNoteId !== null ? "Update Note" : "Save Note"}
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={cancelEdit}
+                disabled={saving}
+                style={styles.cancelNoteButton}
+              >
+                <Text style={styles.cancelNoteButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
           )}
 
-          <Text style={styles.panelTitle}>
-            Saved notes ({notes.length})
-          </Text>
+          <Text style={styles.panelTitle}>Saved notes ({notes.length})</Text>
 
           {notesLoading ? (
             <ActivityIndicator color={NAVY} />
@@ -1325,6 +1388,7 @@ const styles = {
   selectedLecture: {
     borderColor: GOLD,
     backgroundColor: "#FFF9E9",
+    borderWidth: 2,
   },
   lectureTitle: {
     color: "#101828",
@@ -1500,6 +1564,17 @@ const styles = {
     marginTop: 6,
     marginBottom: 8,
   },
+  selectedLectureTitle: {
+    color: NAVY,
+    fontSize: 15,
+    fontWeight: "700",
+    marginBottom: 8,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: "#FFF9E9",
+    borderWidth: 1,
+    borderColor: GOLD,
+  },
   label: {
     color: "#344054",
     fontSize: 13,
@@ -1518,17 +1593,55 @@ const styles = {
   textArea: {
     minHeight: 110,
   },
+  addNoteButton: {
+    backgroundColor: "#FFF4D6",
+    borderWidth: 1,
+    borderColor: GOLD,
+    borderRadius: 9,
+    padding: 13,
+    alignItems: "center",
+    marginTop: 18,
+    marginBottom: 12,
+  },
+  addNoteButtonText: {
+    color: NAVY,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  noteForm: {
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5EAF0",
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 18,
+  },
+  noteFormTitle: {
+    color: NAVY,
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
   saveButton: {
     backgroundColor: NAVY,
     padding: 13,
     borderRadius: 9,
     alignItems: "center",
     marginTop: 12,
-    marginBottom: 18,
+    marginBottom: 8,
   },
   saveButtonText: {
     color: "#FFFFFF",
     fontWeight: "700",
+  },
+  cancelNoteButton: {
+    alignItems: "center",
+    padding: 12,
+    marginTop: 2,
+  },
+  cancelNoteButtonText: {
+    color: MUTED,
+    fontWeight: "600",
   },
   noteCard: {
     flexDirection: "row",

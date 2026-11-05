@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -9,15 +8,12 @@ import {
   View,
   Linking,
 } from "react-native";
-
 import {
   useAudioPlayer,
   useAudioPlayerStatus,
 } from "expo-audio";
-
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
-
 import { Ionicons } from "@expo/vector-icons";
 import { api } from "../../services/api";
 
@@ -62,9 +58,9 @@ function detectCitationCandidates(transcript = "") {
   }
 
   const patterns = [
-    /\b([A-Z][a-zA-Z'-]+)\s*\((\d{4})\)/g,
+    /\b([A-Z][a-zA-Z'-]+)\s+\((\d{4})\)/g,
     /\b([A-Z][a-zA-Z'-]+)\s+et\s+al\.?\s*\((\d{4})\)/g,
-    /\b([A-Z][a-zA-Z'-]+),?\s+et\s+al\.?,?\s+(\d{4})\b/g,
+    /\b([A-Z][a-zA-Z'-]+),?\s+et\s+al\.?[,]?\s+(\d{4})\b/g,
   ];
 
   const candidates = [];
@@ -125,7 +121,13 @@ export default function LectureRecordings({ lectureId }) {
   const [busyId, setBusyId] = useState(null);
   const [error, setError] = useState("");
 
+  // Whisper backup transcription.
   const [transcribingId, setTranscribingId] = useState(null);
+
+  // Deepgram primary transcription.
+  const [deepgramTranscribingId, setDeepgramTranscribingId] =
+    useState(null);
+
   const [transcripts, setTranscripts] = useState({});
   const [transcriptLoadingId, setTranscriptLoadingId] = useState(null);
   const [expandedTranscriptId, setExpandedTranscriptId] = useState(null);
@@ -197,10 +199,18 @@ export default function LectureRecordings({ lectureId }) {
     }
   }
 
+  // Whisper transcription is retained as the backup option.
   async function handleTranscribe(recording) {
     const recordingId = String(recording.id);
 
-    if (transcribingId || transcriptLoadingId || summarizingId) return;
+    if (
+      transcribingId ||
+      deepgramTranscribingId ||
+      transcriptLoadingId ||
+      summarizingId
+    ) {
+      return;
+    }
 
     try {
       setTranscribingId(recordingId);
@@ -218,7 +228,9 @@ export default function LectureRecordings({ lectureId }) {
         [recordingId]: transcript,
       }));
 
-      const candidates = detectCitationCandidates(transcript);
+      const candidates = detectCitationCandidates(
+        transcript.transcript || ""
+      );
 
       setCitationCandidates((previous) => ({
         ...previous,
@@ -240,22 +252,116 @@ export default function LectureRecordings({ lectureId }) {
       setExpandedTranscriptId(recordingId);
 
       Alert.alert(
-        "Transcription complete",
+        "Whisper transcription complete",
+        candidates.length > 0
+          ? `Backup transcript saved. Found ${candidates.length} possible citation(s).`
+          : "Backup transcript saved. No author-year citations were detected."
+      );
+    } catch (err) {
+      Alert.alert(
+        "Whisper transcription failed",
+        err.message || "Could not transcribe this recording with Whisper."
+      );
+    } finally {
+      setTranscribingId(null);
+    }
+  }
+
+  // Deepgram is the primary transcription service.
+  async function handleTranscribeDeepgram(recording) {
+    const recordingId = String(recording.id);
+
+    if (
+      transcribingId ||
+      deepgramTranscribingId ||
+      transcriptLoadingId ||
+      summarizingId
+    ) {
+      return;
+    }
+
+    try {
+      setDeepgramTranscribingId(recordingId);
+      setError("");
+
+      const result = await api.transcribeRecordingDeepgram(recording.id);
+      const transcript = result?.transcript;
+
+      if (!transcript) {
+        throw new Error("Deepgram did not return the saved transcript.");
+      }
+
+      setTranscripts((previous) => ({
+        ...previous,
+        [recordingId]: transcript,
+      }));
+
+      const candidates = detectCitationCandidates(
+        transcript.transcript || ""
+      );
+
+      setCitationCandidates((previous) => ({
+        ...previous,
+        [recordingId]: candidates,
+      }));
+
+      setCitationResults((previous) => ({
+        ...previous,
+        [recordingId]: {},
+      }));
+
+      // Clear any old summary because the transcript has changed.
+      setSummaries((previous) => {
+        const updated = { ...previous };
+        delete updated[recordingId];
+        return updated;
+      });
+
+      setExpandedTranscriptId(recordingId);
+
+      Alert.alert(
+        "Deepgram transcription complete",
         candidates.length > 0
           ? `Transcript saved. Found ${candidates.length} possible citation(s).`
           : "Transcript saved. No author-year citations were detected."
       );
     } catch (err) {
-      setError(err.message || "Could not transcribe this recording.");
+      const errorMessage =
+        err.message || "Could not transcribe this recording with Deepgram.";
+
+      setError(errorMessage);
+
+      // Offer Whisper as a backup if Deepgram fails.
+      Alert.alert(
+        "Deepgram transcription failed",
+        `${errorMessage}\n\nWould you like to try Whisper as a backup?`,
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+          },
+          {
+            text: "Use Whisper",
+            onPress: () => handleTranscribe(recording),
+          },
+        ]
+      );
     } finally {
-      setTranscribingId(null);
+      setDeepgramTranscribingId(null);
     }
   }
 
   async function handleViewTranscript(recording) {
     const recordingId = String(recording.id);
 
-    if (transcriptLoadingId || transcribingId || summarizingId) return;
+    if (
+      transcriptLoadingId ||
+      transcribingId ||
+      deepgramTranscribingId ||
+      summarizingId
+    ) {
+      return;
+    }
 
     if (expandedTranscriptId === recordingId) {
       setExpandedTranscriptId(null);
@@ -278,7 +384,9 @@ export default function LectureRecordings({ lectureId }) {
         [recordingId]: transcript,
       }));
 
-      const candidates = detectCitationCandidates(transcript);
+      const candidates = detectCitationCandidates(
+        transcript.transcript || ""
+      );
 
       setCitationCandidates((previous) => ({
         ...previous,
@@ -298,13 +406,21 @@ export default function LectureRecordings({ lectureId }) {
     const recordingId = String(recording.id);
     const transcript = transcripts[recordingId];
 
-    if (summarizingId || transcribingId || transcriptLoadingId) return;
+    if (
+      summarizingId ||
+      transcribingId ||
+      deepgramTranscribingId ||
+      transcriptLoadingId
+    ) {
+      return;
+    }
 
     if (!transcript?.transcript?.trim()) {
       Alert.alert(
         "Transcript required",
         "Please transcribe this recording first before generating an AI summary."
       );
+
       return;
     }
 
@@ -313,7 +429,6 @@ export default function LectureRecordings({ lectureId }) {
       setError("");
 
       const result = await api.summarizeRecording(recording.id);
-
       const summaryText = getSummaryText(result?.summary);
 
       if (!summaryText) {
@@ -403,87 +518,73 @@ export default function LectureRecordings({ lectureId }) {
           <head>
             <meta charset="utf-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1" />
-
             <style>
               @page {
                 margin: 24px;
               }
-
               body {
                 font-family: Arial, Helvetica, sans-serif;
                 color: #101828;
                 font-size: 12px;
                 line-height: 1.6;
               }
-
               .header {
                 border-bottom: 3px solid ${GOLD};
                 padding-bottom: 14px;
                 margin-bottom: 20px;
               }
-
               .brand {
                 color: ${NAVY};
                 font-size: 12px;
                 font-weight: bold;
                 letter-spacing: 1px;
               }
-
               h1 {
                 color: ${NAVY};
                 font-size: 23px;
                 margin: 8px 0;
                 overflow-wrap: break-word;
               }
-
               .metadata {
                 color: #667085;
                 font-size: 11px;
                 margin-top: 10px;
               }
-
               .metadata p {
                 margin: 3px 0;
               }
-
               h2 {
                 color: ${NAVY};
                 font-size: 16px;
                 margin-top: 24px;
                 margin-bottom: 10px;
               }
-
               .transcript {
                 white-space: pre-wrap;
                 overflow-wrap: break-word;
                 font-size: 12px;
                 line-height: 1.8;
               }
-
               .segments {
                 margin-top: 24px;
                 page-break-inside: auto;
               }
-
               .segment {
                 display: flex;
                 align-items: flex-start;
                 margin-bottom: 10px;
                 page-break-inside: avoid;
               }
-
               .timestamp {
                 color: ${NAVY};
                 font-weight: bold;
                 min-width: 48px;
                 margin-right: 10px;
               }
-
               .segment-text {
                 flex: 1;
                 overflow-wrap: break-word;
               }
-
               .footer {
                 border-top: 1px solid #E5EAF0;
                 margin-top: 30px;
@@ -493,26 +594,21 @@ export default function LectureRecordings({ lectureId }) {
               }
             </style>
           </head>
-
           <body>
             <div class="header">
               <div class="brand">LECTURELENS</div>
               <h1>${escapeHtml(recordingTitle)}</h1>
-
               <div class="metadata">
                 <p><strong>Recording date:</strong> ${escapeHtml(recordingDate)}</p>
                 <p><strong>Language:</strong> ${escapeHtml(language)}</p>
                 <p><strong>Duration:</strong> ${escapeHtml(duration)}</p>
               </div>
             </div>
-
             <section>
               <h2>Lecture transcript</h2>
               <div class="transcript">${escapeHtml(transcriptText)}</div>
             </section>
-
             ${segmentsHtml}
-
             <div class="footer">
               Exported from LectureLens
             </div>
@@ -536,6 +632,7 @@ export default function LectureRecordings({ lectureId }) {
           "PDF created",
           "The transcript PDF was created, but sharing is not available on this device."
         );
+
         return;
       }
 
@@ -609,7 +706,10 @@ export default function LectureRecordings({ lectureId }) {
       "Delete recording?",
       `Delete "${recording.title}"? This action cannot be undone.`,
       [
-        { text: "Cancel", style: "cancel" },
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
         {
           text: "Delete",
           style: "destructive",
@@ -631,13 +731,14 @@ export default function LectureRecordings({ lectureId }) {
                 )
               );
 
-              // Clear cached transcript and summary for deleted recording.
+              // Clear cached transcript for deleted recording.
               setTranscripts((previous) => {
                 const updated = { ...previous };
                 delete updated[String(recording.id)];
                 return updated;
               });
 
+              // Clear cached summary for deleted recording.
               setSummaries((previous) => {
                 const updated = { ...previous };
                 delete updated[String(recording.id)];
@@ -699,13 +800,19 @@ export default function LectureRecordings({ lectureId }) {
       ) : (
         recordings.map((recording) => {
           const recordingId = String(recording.id);
-
           const selected = recordingId === String(playingId);
-
           const transcript = transcripts[recordingId];
           const summary = summaries[recordingId];
-
           const candidates = citationCandidates[recordingId] || [];
+
+          const transcriptionBusy =
+            Boolean(
+              transcribingId ||
+              deepgramTranscribingId ||
+              transcriptLoadingId ||
+              summarizingId ||
+              busyId
+            );
 
           return (
             <View key={recording.id} style={styles.recordingCard}>
@@ -747,6 +854,7 @@ export default function LectureRecordings({ lectureId }) {
                 </TouchableOpacity>
               </View>
 
+              {/* Audio playback */}
               <View style={styles.controlsRow}>
                 <TouchableOpacity
                   style={styles.playButton}
@@ -759,7 +867,10 @@ export default function LectureRecordings({ lectureId }) {
                   }
                 >
                   {busyId === recordingId ? (
-                    <ActivityIndicator color="#FFFFFF" size="small" />
+                    <ActivityIndicator
+                      color="#FFFFFF"
+                      size="small"
+                    />
                   ) : (
                     <Ionicons
                       name={
@@ -799,51 +910,47 @@ export default function LectureRecordings({ lectureId }) {
                 </View>
               </View>
 
-              {/* Transcription actions */}
+              {/* Deepgram primary transcription and transcript viewing */}
               <View style={styles.transcriptionActions}>
                 <TouchableOpacity
-                  style={styles.transcribeButton}
-                  onPress={() => handleTranscribe(recording)}
-                  disabled={Boolean(
-                    transcribingId ||
-                    transcriptLoadingId ||
-                    summarizingId ||
-                    busyId
-                  )}
+                  style={styles.deepgramButton}
+                  onPress={() => handleTranscribeDeepgram(recording)}
+                  disabled={transcriptionBusy}
                 >
-                  {transcribingId === recordingId ? (
-                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  {deepgramTranscribingId === recordingId ? (
+                    <ActivityIndicator
+                      color="#FFFFFF"
+                      size="small"
+                    />
                   ) : (
                     <Ionicons
-                      name="text-outline"
+                      name="sparkles-outline"
                       size={17}
                       color="#FFFFFF"
                     />
                   )}
 
                   <Text style={styles.transcribeButtonText}>
-                    {transcribingId === recordingId
+                    {deepgramTranscribingId === recordingId
                       ? "Transcribing..."
-                      : "Transcribe"}
+                      : "Transcribe recording"}
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={styles.viewTranscriptButton}
                   onPress={() => handleViewTranscript(recording)}
-                  disabled={Boolean(
-                    transcribingId ||
-                    transcriptLoadingId ||
-                    summarizingId ||
-                    busyId
-                  )}
+                  disabled={transcriptionBusy}
                 >
                   {transcriptLoadingId === recordingId ? (
-                    <ActivityIndicator color={NAVY} size="small" />
+                    <ActivityIndicator
+                      color={NAVY}
+                      size="small"
+                    />
                   ) : (
                     <Ionicons
                       name="document-text-outline"
-                      size={17}
+                      size={16}
                       color={NAVY}
                     />
                   )}
@@ -866,7 +973,9 @@ export default function LectureRecordings({ lectureId }) {
                   <Text style={styles.transcriptMetadata}>
                     Language: {transcript.language || "Unknown"}
                     {transcript.duration_seconds != null
-                      ? `  ·  ${formatTime(transcript.duration_seconds)}`
+                      ? `  ·  ${formatTime(
+                          transcript.duration_seconds
+                        )}`
                       : ""}
                   </Text>
 
@@ -879,7 +988,10 @@ export default function LectureRecordings({ lectureId }) {
                     disabled={Boolean(exportingTranscriptId)}
                   >
                     {exportingTranscriptId === recordingId ? (
-                      <ActivityIndicator color="#FFFFFF" size="small" />
+                      <ActivityIndicator
+                        color="#FFFFFF"
+                        size="small"
+                      />
                     ) : (
                       <Ionicons
                         name="document-outline"
@@ -925,6 +1037,7 @@ export default function LectureRecordings({ lectureId }) {
                       disabled={Boolean(
                         summarizingId ||
                         transcribingId ||
+                        deepgramTranscribingId ||
                         transcriptLoadingId
                       )}
                     >
@@ -1314,13 +1427,14 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
 
-  transcribeButton: {
-    flex: 1,
+  // Main Deepgram transcription button.
+  deepgramButton: {
+    flex: 1.5,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    paddingVertical: 10,
+    paddingVertical: 11,
     paddingHorizontal: 8,
     borderRadius: 8,
     backgroundColor: NAVY,
@@ -1328,8 +1442,9 @@ const styles = StyleSheet.create({
 
   transcribeButtonText: {
     color: "#FFFFFF",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
+    textAlign: "center",
   },
 
   viewTranscriptButton: {
@@ -1348,8 +1463,9 @@ const styles = StyleSheet.create({
 
   viewTranscriptButtonText: {
     color: NAVY,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "700",
+    textAlign: "center",
   },
 
   transcriptCard: {

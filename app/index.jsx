@@ -1,232 +1,241 @@
-
 import React from "react";
 import {
   SafeAreaView,
   View,
   Text,
-  StyleSheet,
   Pressable,
-  ScrollView,
+  StyleSheet,
+  StatusBar,
 } from "react-native";
-import { Link } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 
-export default function OnboardingScreen() {
+const NAVY = "#12325B";
+const GOLD = "#F2B544";
+const BG = "#F5F7FB";
+const MUTED = "#687589";
+
+export default function WelcomeScreen() {
   return (
-    <SafeAreaView style={styles.screen}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.logoContainer}>
-          <Text style={styles.logoIcon}>LL</Text>
-        </View>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="light-content" backgroundColor={NAVY} />
 
-        <Text style={styles.brand}>LectureLens</Text>
+      <View style={styles.container}>
+        <View style={styles.hero}>
+          <Text style={styles.appName}>LectureLens</Text>
 
-        <Text style={styles.heading}>
-          Your lectures,{"\n"}made easier to follow.
-        </Text>
-
-        <Text style={styles.description}>
-          Capture lecture information, organize your learning
-          materials, and review your notes at your own pace.
-        </Text>
-
-        <View style={styles.featureList}>
-          <View style={styles.feature}>
-            <Text style={styles.featureIcon}>01</Text>
-            <View style={styles.featureTextContainer}>
-              <Text style={styles.featureTitle}>
-                Capture lecture information
-              </Text>
-              <Text style={styles.featureDescription}>
-                Support your learning with lecture capture
-                and transcription features.
-              </Text>
-            </View>
+          {/* Application icon centered below the name */}
+          <View style={styles.logoCircle}>
+            <Ionicons name="binoculars-outline" size={34} color={NAVY} />
           </View>
 
-          <View style={styles.feature}>
-            <Text style={styles.featureIcon}>02</Text>
-            <View style={styles.featureTextContainer}>
-              <Text style={styles.featureTitle}>
-                Organize your modules
-              </Text>
-              <Text style={styles.featureDescription}>
-                Keep your learning materials organized
-                by your own courses and modules.
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.feature}>
-            <Text style={styles.featureIcon}>03</Text>
-            <View style={styles.featureTextContainer}>
-              <Text style={styles.featureTitle}>
-                Review your notes
-              </Text>
-              <Text style={styles.featureDescription}>
-                Return to lecture notes and references
-                when you need them.
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        <Link href="/login" asChild>
-          <Pressable
-            style={styles.primaryButton}
-            accessibilityRole="button"
-          >
-            <Text style={styles.primaryButtonText}>
-              Get Started
-            </Text>
-          </Pressable>
-        </Link>
-
-        <View style={styles.loginRow}>
-          <Text style={styles.loginPrompt}>
-            New to LectureLens?
+          <Text style={styles.headline}>
+            Learn without{"\n"}
+            <Text style={styles.goldText}>missing a moment.</Text>
           </Text>
 
-          <Link href="/register" asChild>
-            <Pressable accessibilityRole="button">
-              <Text style={styles.registerLink}>
-                Create account
-              </Text>
-            </Pressable>
-          </Link>
+          <Text style={styles.description}>
+            Your lecture companion for capturing, organising and revisiting
+            lecture information.
+          </Text>
         </View>
 
-        <Text style={styles.footer}>
-          Designed to support accessible learning
-        </Text>
-      </ScrollView>
+        <View style={styles.features}>
+          <Feature
+            icon="mic-outline"
+            title="Capture lectures"
+            description="Record and keep lecture audio together."
+          />
+          <Feature
+            icon="document-text-outline"
+            title="Notes and transcripts"
+            description="Review lecture text and add your own notes."
+          />
+          <Feature
+            icon="library-outline"
+            title="Organise your learning"
+            description="Keep modules, lectures and resources in one place."
+          />
+        </View>
+
+        <View style={styles.actions}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push("/register")}
+            style={({ pressed }) => [
+              styles.primaryButton,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={styles.primaryButtonText}>Get Started</Text>
+            <Ionicons name="arrow-forward" size={19} color={NAVY} />
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push("/login")}
+            style={({ pressed }) => [
+              styles.signInButton,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={styles.signInLabel}>
+              Already have an account? <Text style={styles.signInText}>Sign in</Text>
+            </Text>
+          </Pressable>
+        </View>
+
+        <Text style={styles.footer}>Supporting accessible learning at MUBAS.</Text>
+      </View>
     </SafeAreaView>
   );
 }
 
+function Feature({ icon, title, description }) {
+  return (
+    <View style={styles.featureRow}>
+      <View style={styles.featureIcon}>
+        <Ionicons name={icon} size={22} color={NAVY} />
+      </View>
+      <View style={styles.featureCopy}>
+        <Text style={styles.featureTitle}>{title}</Text>
+        <Text style={styles.featureDescription}>{description}</Text>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  screen: {
+  safeArea: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: BG,
   },
-  content: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 36,
-    paddingBottom: 28,
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    paddingTop: 18,
+    paddingBottom: 14,
+  },
+  hero: {
+    backgroundColor: NAVY,
     alignItems: "center",
+    paddingHorizontal: 22,
+    paddingTop: 70,
+    marginTop:-50,
+    paddingBottom: 14,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
   },
-  logoContainer: {
-    width: 76,
-    height: 76,
-    borderRadius: 24,
-    backgroundColor: "#2563EB",
+  appName: {
+    color: "#FFFFFF",
+    fontSize: 22,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  logoCircle: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    backgroundColor: GOLD,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 12,
+    marginTop: 8,
   },
-  logoIcon: {
+  headline: {
     color: "#FFFFFF",
-    fontSize: 27,
+    fontSize: 22,
+    lineHeight: 28,
     fontWeight: "800",
-    letterSpacing: 1,
-  },
-  brand: {
-    fontSize: 19,
-    fontWeight: "700",
-    color: "#2563EB",
-    marginBottom: 28,
-  },
-  heading: {
-    width: "100%",
-    fontSize: 32,
-    lineHeight: 40,
-    fontWeight: "800",
-    color: "#0F172A",
     textAlign: "center",
+    marginTop: 10,
+  },
+  goldText: {
+    color: GOLD,
   },
   description: {
-    fontSize: 15,
-    lineHeight: 23,
-    color: "#64748B",
+    color: "#E3EAF3",
+    fontSize: 12,
+    lineHeight: 17,
     textAlign: "center",
-    marginTop: 14,
-    marginBottom: 28,
+    marginTop: 7,
+    maxWidth: 310,
   },
-  featureList: {
-    width: "100%",
-    gap: 20,
-    marginBottom: 30,
+  features: {
+    paddingHorizontal: 18,
+    paddingTop: 17,
+    gap: 10,
   },
-  feature: {
+  featureRow: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E6EBF2",
+    borderRadius: 13,
+    paddingVertical: 10,
+    paddingHorizontal: 11,
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 14,
+    alignItems: "center",
   },
   featureIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: "#DBEAFE",
-    color: "#1D4ED8",
-    textAlign: "center",
-    textAlignVertical: "center",
-    overflow: "hidden",
-    fontWeight: "800",
-    fontSize: 14,
-    paddingTop: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    backgroundColor: "#FFF3D8",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 11,
   },
-  featureTextContainer: {
+  featureCopy: {
     flex: 1,
-    paddingTop: 1,
   },
   featureTitle: {
-    fontSize: 15,
+    color: NAVY,
+    fontSize: 13,
     fontWeight: "700",
-    color: "#0F172A",
-    marginBottom: 4,
   },
   featureDescription: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: "#64748B",
+    color: MUTED,
+    fontSize: 11,
+    lineHeight: 15,
+    marginTop: 2,
+  },
+  actions: {
+    paddingHorizontal: 18,
+    marginTop: 17,
   },
   primaryButton: {
-    width: "100%",
-    minHeight: 54,
-    borderRadius: 14,
-    backgroundColor: "#2563EB",
+    minHeight: 48,
+    backgroundColor: GOLD,
+    borderRadius: 13,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 9,
   },
   primaryButtonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
+    color: NAVY,
+    fontSize: 15,
+    fontWeight: "800",
   },
-  loginRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
+  pressed: {
+    opacity: 0.78,
+  },
+  signInButton: {
     alignItems: "center",
-    gap: 5,
-    marginTop: 20,
+    paddingVertical: 10,
   },
-  loginPrompt: {
-    color: "#64748B",
-    fontSize: 14,
+  signInLabel: {
+    color: MUTED,
+    fontSize: 12,
   },
-  registerLink: {
-    color: "#2563EB",
-    fontSize: 14,
-    fontWeight: "700",
+  signInText: {
+    color: NAVY,
+    fontWeight: "800",
   },
   footer: {
-    color: "#94A3B8",
-    fontSize: 12,
+    color: MUTED,
+    fontSize: 10,
     textAlign: "center",
-    marginTop: 28,
+    paddingHorizontal: 12,
+    marginTop: 11,
   },
 });

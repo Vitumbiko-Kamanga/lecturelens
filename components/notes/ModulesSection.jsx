@@ -1,3 +1,4 @@
+
 import React, {
   useCallback,
   useEffect,
@@ -57,6 +58,9 @@ export default function ModulesSection({
   const [resourceUrl, setResourceUrl] = useState("");
   const [resourceType, setResourceType] = useState("book");
   const [resourceSaving, setResourceSaving] = useState(false);
+
+  // Controls which module's resource form is visible.
+  const [resourceFormModuleId, setResourceFormModuleId] = useState(null);
 
   const [transcriptsByRecording, setTranscriptsByRecording] = useState({});
   const [expandedTranscriptId, setExpandedTranscriptId] = useState(null);
@@ -299,6 +303,32 @@ export default function ModulesSection({
     }
   }
 
+  // Reset the resource form.
+  function resetResourceForm() {
+    setResourceTitle("");
+    setResourceAuthor("");
+    setResourceUrl("");
+    setResourceType("book");
+  }
+
+  // Toggle the resource form for a particular module.
+  function toggleResourceForm(moduleId) {
+    if (String(resourceFormModuleId) === String(moduleId)) {
+      setResourceFormModuleId(null);
+      resetResourceForm();
+      return;
+    }
+
+    setResourceFormModuleId(moduleId);
+    resetResourceForm();
+  }
+
+  // Cancel resource entry and hide the form.
+  function cancelResourceForm() {
+    setResourceFormModuleId(null);
+    resetResourceForm();
+  }
+
   // Add a resource to the currently expanded module.
   async function saveResource(moduleId) {
     if (!resourceTitle.trim()) {
@@ -344,10 +374,9 @@ export default function ModulesSection({
         await loadModuleResources(moduleId);
       }
 
-      setResourceTitle("");
-      setResourceAuthor("");
-      setResourceUrl("");
-      setResourceType("book");
+      // Clear the form and close it after successful saving.
+      resetResourceForm();
+      setResourceFormModuleId(null);
 
       Alert.alert("Resource saved", "Your learning resource has been saved.");
     } catch (err) {
@@ -707,6 +736,8 @@ export default function ModulesSection({
           const isExpanded = expandedModule === module.id;
           const moduleLectures = lecturesByModule[module.id] || [];
           const moduleResources = resourcesByModule[module.id] || [];
+          const isResourceFormOpen =
+            String(resourceFormModuleId) === String(module.id);
 
           return (
             <View key={module.id} style={styles.card}>
@@ -771,6 +802,7 @@ export default function ModulesSection({
                   {/* Learning resources for this module */}
                   <View style={styles.resourceSection}>
                     <Text style={styles.sectionTitle}>Learning Resources</Text>
+
                     <Text style={styles.emptyText}>
                       Save books, articles, websites and other study materials
                       for this module.
@@ -786,6 +818,7 @@ export default function ModulesSection({
                         <Text style={styles.error}>
                           {resourcesError[module.id]}
                         </Text>
+
                         <TouchableOpacity
                           onPress={() => loadModuleResources(module.id)}
                           style={styles.retryButton}
@@ -841,75 +874,107 @@ export default function ModulesSection({
                       ))
                     )}
 
-                    <Text style={styles.label}>Resource title *</Text>
-                    <TextInput
-                      value={resourceTitle}
-                      onChangeText={setResourceTitle}
-                      placeholder="e.g. Introduction to Database Systems"
-                      style={styles.input}
-                    />
+                    {/* Add Learning Resources button */}
+                    <TouchableOpacity
+                      onPress={() => toggleResourceForm(module.id)}
+                      style={styles.addResourceButton}
+                      disabled={resourceSaving}
+                    >
+                      <Text style={styles.addResourceButtonText}>
+                        {isResourceFormOpen
+                          ? "− Hide Learning Resources Form"
+                          : "+ Add Learning Resources"}
+                      </Text>
+                    </TouchableOpacity>
 
-                    <Text style={styles.label}>Author (optional)</Text>
-                    <TextInput
-                      value={resourceAuthor}
-                      onChangeText={setResourceAuthor}
-                      placeholder="Enter author or publisher"
-                      style={styles.input}
-                    />
+                    {/* Collapsible resource form */}
+                    {isResourceFormOpen && (
+                      <View style={styles.resourceForm}>
+                        <Text style={styles.resourceFormTitle}>
+                          Add a learning resource
+                        </Text>
 
-                    <Text style={styles.label}>Resource URL (optional)</Text>
-                    <TextInput
-                      value={resourceUrl}
-                      onChangeText={setResourceUrl}
-                      placeholder="https://example.com"
-                      autoCapitalize="none"
-                      keyboardType="url"
-                      style={styles.input}
-                    />
+                        <Text style={styles.label}>Resource title *</Text>
+                        <TextInput
+                          value={resourceTitle}
+                          onChangeText={setResourceTitle}
+                          placeholder="e.g. Introduction to Database Systems"
+                          style={styles.input}
+                        />
 
-                    <Text style={styles.label}>Resource type</Text>
-                    <View style={styles.resourceTypes}>
-                      {RESOURCE_TYPES.map((type) => (
+                        <Text style={styles.label}>Author (optional)</Text>
+                        <TextInput
+                          value={resourceAuthor}
+                          onChangeText={setResourceAuthor}
+                          placeholder="Enter author or publisher"
+                          style={styles.input}
+                        />
+
+                        <Text style={styles.label}>Resource URL (optional)</Text>
+                        <TextInput
+                          value={resourceUrl}
+                          onChangeText={setResourceUrl}
+                          placeholder="https://example.com"
+                          autoCapitalize="none"
+                          keyboardType="url"
+                          style={styles.input}
+                        />
+
+                        <Text style={styles.label}>Resource type</Text>
+                        <View style={styles.resourceTypes}>
+                          {RESOURCE_TYPES.map((type) => (
+                            <TouchableOpacity
+                              key={type}
+                              onPress={() => setResourceType(type)}
+                              style={[
+                                styles.resourceTypeOption,
+                                resourceType === type &&
+                                  styles.resourceTypeSelected,
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.resourceTypeOptionText,
+                                  resourceType === type &&
+                                    styles.resourceTypeSelectedText,
+                                ]}
+                              >
+                                {type === "paper"
+                                  ? "Research paper"
+                                  : type.charAt(0).toUpperCase() + type.slice(1)}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+
                         <TouchableOpacity
-                          key={type}
-                          onPress={() => setResourceType(type)}
+                          onPress={() => saveResource(module.id)}
+                          disabled={resourceSaving}
                           style={[
-                            styles.resourceTypeOption,
-                            resourceType === type &&
-                              styles.resourceTypeSelected,
+                            styles.resourceSaveButton,
+                            resourceSaving && { opacity: 0.6 },
                           ]}
                         >
-                          <Text
-                            style={[
-                              styles.resourceTypeOptionText,
-                              resourceType === type &&
-                                styles.resourceTypeSelectedText,
-                            ]}
-                          >
-                            {type === "paper"
-                              ? "Research paper"
-                              : type.charAt(0).toUpperCase() + type.slice(1)}
+                          {resourceSaving ? (
+                            <ActivityIndicator color="#FFFFFF" />
+                          ) : (
+                            <Text style={styles.resourceSaveButtonText}>
+                              Save Learning Resource
+                            </Text>
+                          )}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          onPress={cancelResourceForm}
+                          disabled={resourceSaving}
+                          style={styles.cancelResourceButton}
+                        >
+                          <Text style={styles.cancelResourceButtonText}>
+                            Cancel
                           </Text>
                         </TouchableOpacity>
-                      ))}
-                    </View>
-
-                    <TouchableOpacity
-                      onPress={() => saveResource(module.id)}
-                      disabled={resourceSaving}
-                      style={[
-                        styles.resourceSaveButton,
-                        resourceSaving && { opacity: 0.6 },
-                      ]}
-                    >
-                      {resourceSaving ? (
-                        <ActivityIndicator color="#FFFFFF" />
-                      ) : (
-                        <Text style={styles.resourceSaveButtonText}>
-                          Save Learning Resource
-                        </Text>
-                      )}
-                    </TouchableOpacity>
+                      </View>
+                    )}
                   </View>
                 </View>
               )}
@@ -1242,7 +1307,7 @@ const styles = {
     paddingHorizontal: 12,
     paddingBottom: 12,
   },
-    sectionTitle: {
+  sectionTitle: {
     color: NAVY,
     fontSize: 18,
     fontWeight: "700",
@@ -1370,6 +1435,43 @@ const styles = {
   resourceTypeSelectedText: {
     color: NAVY,
     fontWeight: "700",
+  },
+  addResourceButton: {
+    backgroundColor: "#FFF4D6",
+    borderWidth: 1,
+    borderColor: GOLD,
+    borderRadius: 9,
+    padding: 13,
+    alignItems: "center",
+    marginTop: 14,
+  },
+  addResourceButtonText: {
+    color: NAVY,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  resourceForm: {
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5EAF0",
+    borderRadius: 10,
+    padding: 14,
+    marginTop: 12,
+  },
+  resourceFormTitle: {
+    color: NAVY,
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  cancelResourceButton: {
+    alignItems: "center",
+    padding: 11,
+    marginTop: 5,
+  },
+  cancelResourceButtonText: {
+    color: MUTED,
+    fontWeight: "600",
   },
   resourceSaveButton: {
     backgroundColor: NAVY,

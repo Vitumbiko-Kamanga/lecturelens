@@ -44,6 +44,49 @@ function getItems(result, key) {
   return [];
 }
 
+/**
+ * Normalize transcripts from Deepgram and Whisper.
+ *
+ * Deepgram returns word-level segments containing "word".
+ * Whisper returns segments containing "text".
+ *
+ * For Deepgram, use the complete transcript and hide the word-level
+ * timestamps so the Notes screen displays readable continuous text.
+ */
+function normalizeTranscript(transcriptRecord) {
+  if (!transcriptRecord || typeof transcriptRecord !== "object") {
+    return transcriptRecord;
+  }
+
+  const segments = Array.isArray(transcriptRecord.segments)
+    ? transcriptRecord.segments
+    : [];
+
+  const hasDeepgramWordSegments = segments.some(
+    (segment) =>
+      typeof segment?.word === "string" &&
+      typeof segment?.text !== "string"
+  );
+
+  if (hasDeepgramWordSegments) {
+    const reconstructedText = segments
+      .map((segment) => segment.word || "")
+      .filter(Boolean)
+      .join(" ");
+
+    return {
+      ...transcriptRecord,
+      transcript:
+        transcriptRecord.transcript ||
+        reconstructedText ||
+        "",
+      segments: [],
+    };
+  }
+
+  return transcriptRecord;
+}
+
 export default function ModulesSection({
   initialModuleId,
   initialLectureId,
@@ -486,7 +529,9 @@ export default function ModulesSection({
 
     try {
       const result = await api.getRecordingTranscript(recordingId);
-      const savedTranscript = result?.transcript;
+
+      // Normalize Deepgram word-level segments into full readable text.
+      const savedTranscript = normalizeTranscript(result?.transcript);
 
       if (!savedTranscript) {
         throw new Error("The transcript response was empty.");
@@ -535,7 +580,9 @@ export default function ModulesSection({
       for (const recording of recordings) {
         try {
           const response = await api.getRecordingTranscript(recording.id);
-          const transcript = response?.transcript;
+
+          // Apply the same normalization used when viewing a transcript.
+          const transcript = normalizeTranscript(response?.transcript);
 
           if (!transcript) continue;
 

@@ -1,5 +1,4 @@
-
-require("dotenv").config();
+﻿require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
@@ -9,6 +8,7 @@ const modulesRouter = require("./routes/modules");
 const lecturesRouter = require("./routes/lectures");
 const resourcesRouter = require("./routes/resources");
 const recordingsRouter = require("./routes/recordings");
+const aiRouter = require("./routes/ai");
 
 const app = express();
 
@@ -40,6 +40,7 @@ app.use("/api/modules", modulesRouter);
 app.use("/api/lectures", lecturesRouter);
 app.use("/api/resources", resourcesRouter);
 app.use("/api/recordings", recordingsRouter);
+app.use("/api/ai", aiRouter);
 
 app.use((req, res) => {
   res.status(404).json({
@@ -138,7 +139,6 @@ async function initializeDatabase() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
-
 
   console.log("LectureLens database tables are ready.");
 }

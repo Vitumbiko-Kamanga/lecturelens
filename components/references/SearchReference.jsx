@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 
 import {
@@ -9,13 +10,16 @@ import {
   Linking,
   Alert,
   Keyboard,
+  StyleSheet,
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 
 import { api } from "../../services/api";
-import styles from "../../styles/referencesStyles";
+
+const NAVY = "#12325B";
+const GOLD = "#F2B544";
 
 export default function SearchReference() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -58,7 +62,8 @@ export default function SearchReference() {
   }
 
   function createCitation(reference) {
-    const authors = reference.authors?.trim() || "Author unavailable";
+    const authors =
+      reference.authors?.trim() || "Author unavailable";
 
     const year =
       typeof reference.year === "number" ||
@@ -76,9 +81,7 @@ export default function SearchReference() {
 
   async function copyCitation(reference) {
     try {
-      const citation = createCitation(reference);
-
-      await Clipboard.setStringAsync(citation);
+      await Clipboard.setStringAsync(createCitation(reference));
 
       Alert.alert(
         "Citation copied",
@@ -112,215 +115,141 @@ export default function SearchReference() {
   }
 
   return (
-    <View style={{ width: "100%" }}>
+    <View style={localStyles.container}>
+      <Text style={localStyles.heading}>
+        Find Academic References
+      </Text>
+
+      <Text style={localStyles.description}>
+        Search for publications, research papers, and academic sources
+        to support your studies.
+      </Text>
+
       {/* Search bar */}
-      <View
-        style={[
-          styles.searchBar,
-          {
-            backgroundColor: "#FFFFFF",
-            borderWidth: 1,
-            borderColor: "#DCE3EC",
-          },
-        ]}
-      >
+      <View style={localStyles.searchBar}>
         <Ionicons
-          name="search"
+          name="search-outline"
           size={22}
-          color="#12325B"
+          color={NAVY}
         />
 
         <TextInput
           placeholder="Search academic references..."
-          placeholderTextColor="#9CA3AF"
-          style={[
-            styles.searchInput,
-            {
-              flex: 1,
-              color: "#12325B",
-            },
-          ]}
+          placeholderTextColor="#98A2B3"
+          style={localStyles.searchInput}
           value={searchQuery}
           onChangeText={setSearchQuery}
           onSubmitEditing={handleSearch}
           returnKeyType="search"
+          editable={!loading}
         />
 
         <TouchableOpacity
           onPress={handleSearch}
           disabled={loading}
           activeOpacity={0.8}
-          style={{
-            backgroundColor: "#12325B",
-            paddingHorizontal: 14,
-            paddingVertical: 10,
-            borderRadius: 10,
-            opacity: loading ? 0.6 : 1,
-          }}
+          style={[
+            localStyles.searchButton,
+            loading && localStyles.disabledButton,
+          ]}
         >
-          <Text
-            style={{
-              color: "#FFFFFF",
-              fontWeight: "bold",
-            }}
-          >
+          <Text style={localStyles.searchButtonText}>
             Search
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Loading indicator */}
+      {/* Loading */}
       {loading && (
-        <View
-          style={{
-            alignItems: "center",
-            padding: 20,
-          }}
-        >
-          <ActivityIndicator
-            size="large"
-            color="#12325B"
-          />
+        <View style={localStyles.statusContainer}>
+          <ActivityIndicator size="large" color={NAVY} />
 
-          <Text
-            style={{
-              marginTop: 10,
-              color: "#12325B",
-            }}
-          >
+          <Text style={localStyles.statusText}>
             Searching academic publications...
           </Text>
         </View>
       )}
 
-      {/* Error or empty results */}
+      {/* Error / empty result */}
       {!loading && error !== "" && (
-        <Text
-          style={{
-            color: "#B42318",
-            marginTop: 15,
-            marginBottom: 10,
-          }}
-        >
-          {error}
-        </Text>
+        <View style={localStyles.messageCard}>
+          <Ionicons
+            name="information-circle-outline"
+            size={24}
+            color="#B42318"
+          />
+
+          <Text style={localStyles.errorText}>
+            {error}
+          </Text>
+        </View>
       )}
 
-      {/* Search results */}
+      {/* Results */}
       {!loading && references.length > 0 && (
-        <View style={{ marginTop: 20 }}>
-          <Text
-            style={{
-              fontSize: 18,
-              fontWeight: "bold",
-              color: "#12325B",
-              marginBottom: 12,
-            }}
-          >
+        <View style={localStyles.resultsContainer}>
+          <Text style={localStyles.resultsHeading}>
             Academic Publications
+          </Text>
+
+          <Text style={localStyles.resultsCount}>
+            {references.length} publication(s) found
           </Text>
 
           {references.map((reference, index) => (
             <View
               key={reference.doi || `${reference.title}-${index}`}
-              style={{
-                backgroundColor: "#FFFFFF",
-                borderRadius: 12,
-                padding: 15,
-                marginBottom: 12,
-                borderWidth: 1,
-                borderColor: "#E2E8F0",
-              }}
+              style={localStyles.referenceCard}
             >
-              {/* Publication title */}
-              <Text
-                style={{
-                  fontSize: 16,
-                  fontWeight: "bold",
-                  color: "#12325B",
-                  marginBottom: 8,
-                }}
-              >
-                {reference.title}
-              </Text>
+              <View style={localStyles.cardHeader}>
+                <View style={localStyles.bookIcon}>
+                  <Ionicons
+                    name="document-text-outline"
+                    size={22}
+                    color={NAVY}
+                  />
+                </View>
 
-              {/* Authors */}
-              <Text
-                style={{
-                  fontSize: 14,
-                  color: "#475569",
-                  marginBottom: 5,
-                }}
-              >
+                <View style={localStyles.titleContainer}>
+                  <Text style={localStyles.referenceTitle}>
+                    {reference.title || "Untitled publication"}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={localStyles.metadata}>
                 Authors: {reference.authors || "Not available"}
               </Text>
 
-              {/* Publication year */}
-              <Text
-                style={{
-                  fontSize: 14,
-                  color: "#475569",
-                  marginBottom: 12,
-                }}
-              >
-                Year: {reference.year}
+              <Text style={localStyles.metadata}>
+                Year: {reference.year || "Not available"}
               </Text>
 
-              {/* Publication actions */}
-              <View
-                style={{
-                  flexDirection: "row",
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                  gap: 10,
-                }}
-              >
-                {/* View publication */}
+              <View style={localStyles.actions}>
                 <TouchableOpacity
                   onPress={() => openReference(reference.url)}
                   disabled={!reference.url}
                   activeOpacity={0.8}
-                  style={{
-                    backgroundColor: "#F2B544",
-                    paddingVertical: 10,
-                    paddingHorizontal: 14,
-                    borderRadius: 8,
-                    alignSelf: "flex-start",
-                    opacity: reference.url ? 1 : 0.5,
-                    flexDirection: "row",
-                    alignItems: "center",
-                  }}
+                  style={[
+                    localStyles.viewButton,
+                    !reference.url && localStyles.disabledButton,
+                  ]}
                 >
                   <Ionicons
                     name="open-outline"
                     size={16}
-                    color="#12325B"
+                    color={NAVY}
                   />
 
-                  <Text
-                    style={{
-                      color: "#12325B",
-                      fontWeight: "bold",
-                      marginLeft: 6,
-                    }}
-                  >
+                  <Text style={localStyles.viewButtonText}>
                     View Publication
                   </Text>
                 </TouchableOpacity>
 
-                {/* Copy citation */}
                 <TouchableOpacity
                   onPress={() => copyCitation(reference)}
                   activeOpacity={0.8}
-                  style={{
-                    backgroundColor: "#12325B",
-                    paddingVertical: 10,
-                    paddingHorizontal: 14,
-                    borderRadius: 8,
-                    alignSelf: "flex-start",
-                    flexDirection: "row",
-                    alignItems: "center",
-                  }}
+                  style={localStyles.copyButton}
                 >
                   <Ionicons
                     name="copy-outline"
@@ -328,13 +257,7 @@ export default function SearchReference() {
                     color="#FFFFFF"
                   />
 
-                  <Text
-                    style={{
-                      color: "#FFFFFF",
-                      fontWeight: "bold",
-                      marginLeft: 6,
-                    }}
-                  >
+                  <Text style={localStyles.copyButtonText}>
                     Copy Citation
                   </Text>
                 </TouchableOpacity>
@@ -346,3 +269,192 @@ export default function SearchReference() {
     </View>
   );
 }
+
+const localStyles = StyleSheet.create({
+  container: {
+    width: "100%",
+    marginBottom: 24,
+  },
+
+  heading: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: NAVY,
+    marginBottom: 6,
+  },
+
+  description: {
+    fontSize: 13,
+    color: "#667085",
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "#DCE3EC",
+    elevation: 2,
+  },
+
+  searchInput: {
+    flex: 1,
+    marginLeft: 10,
+    marginRight: 8,
+    fontSize: 14,
+    color: NAVY,
+    paddingVertical: 6,
+  },
+
+  searchButton: {
+    backgroundColor: NAVY,
+    borderBottomWidth: 3,
+    borderBottomColor: GOLD,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 9,
+  },
+
+  searchButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+
+  disabledButton: {
+    opacity: 0.5,
+  },
+
+  statusContainer: {
+    alignItems: "center",
+    padding: 22,
+  },
+
+  statusText: {
+    marginTop: 10,
+    color: NAVY,
+    fontSize: 13,
+  },
+
+  messageCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 16,
+  },
+
+  errorText: {
+    color: "#B42318",
+    marginLeft: 10,
+    flex: 1,
+  },
+
+  resultsContainer: {
+    marginTop: 22,
+  },
+
+  resultsHeading: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: NAVY,
+  },
+
+  resultsCount: {
+    fontSize: 12,
+    color: "#667085",
+    marginTop: 4,
+    marginBottom: 14,
+  },
+
+  referenceCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 15,
+    padding: 16,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderLeftWidth: 4,
+    borderLeftColor: GOLD,
+    elevation: 2,
+  },
+
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 12,
+  },
+
+  bookIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: "#FFF6E0",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+
+  titleContainer: {
+    flex: 1,
+  },
+
+  referenceTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: NAVY,
+    lineHeight: 22,
+  },
+
+  metadata: {
+    fontSize: 13,
+    color: "#475569",
+    marginBottom: 6,
+    lineHeight: 19,
+  },
+
+  actions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 12,
+  },
+
+  viewButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: GOLD,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+
+  viewButtonText: {
+    color: NAVY,
+    fontWeight: "700",
+    fontSize: 12,
+    marginLeft: 6,
+  },
+
+  copyButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: NAVY,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+
+  copyButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: 12,
+    marginLeft: 6,
+  },
+});

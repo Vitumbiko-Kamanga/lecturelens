@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   View,
@@ -10,15 +9,30 @@ import {
 
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useAuth } from "@clerk/expo";
+import { useAuth, useUser } from "@clerk/expo";
 
 import styles from "../../styles/homeStyles";
 
 export default function HomeHeader({ userName }) {
   const [menuVisible, setMenuVisible] = useState(false);
-  const { signOut } = useAuth();
 
-  const initial = userName?.trim()?.[0]?.toUpperCase() || "S";
+  const { signOut } = useAuth();
+  const { isLoaded, user } = useUser();
+
+  // Prefer the actual logged-in Clerk user's identity.
+  const clerkUserName =
+    user?.firstName?.trim() ||
+    user?.fullName?.trim() ||
+    user?.username?.trim() ||
+    user?.primaryEmailAddress?.emailAddress?.split("@")[0] ||
+    "";
+
+  // Keep userName as a fallback for compatibility with existing screens.
+  const displayName = clerkUserName || userName?.trim() || "";
+
+  const initial = isLoaded
+    ? displayName.charAt(0).toUpperCase() || "S"
+    : "S";
 
   const closeMenu = () => {
     setMenuVisible(false);
@@ -44,7 +58,7 @@ export default function HomeHeader({ userName }) {
   return (
     <>
       <View style={styles.header}>
-        {/* Logged-in user's initial */}
+        {/* Initial of the authenticated user */}
         <View style={styles.usernameContainer}>
           <Text style={styles.userName}>{initial}</Text>
         </View>
@@ -79,7 +93,6 @@ export default function HomeHeader({ userName }) {
         onRequestClose={closeMenu}
       >
         <View style={menuStyles.overlay}>
-          {/* Tap outside to close */}
           <TouchableOpacity
             style={menuStyles.backdrop}
             activeOpacity={1}

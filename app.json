@@ -36,7 +36,8 @@
           "microphonePermission": "Allow LectureLens to record lecture audio."
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "expo-stream-audio"
     ]
   }
 }

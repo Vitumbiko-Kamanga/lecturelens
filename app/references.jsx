@@ -1,3 +1,4 @@
+
 import React from "react";
 import { ScrollView, View } from "react-native";
 
@@ -6,41 +7,33 @@ import NavBar from "../components/navbar";
 import FloatingRecordButton from "../components/home/FloatingRecordButton";
 
 import SearchReference from "../components/references/SearchReference";
-import FeaturedResource from "../components/references/FeaturedResource";
 import ModuleList from "../components/references/ModuleList";
 import ReferenceCategoryList from "../components/references/ReferenceCategoryList";
 
 import styles from "../styles/referencesStyles";
 
 export default function Reference() {
+  return (
+    <View style={styles.main}>
+      <HomeHeader />
 
-    return (
+      <ScrollView
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingBottom: 110,
+        }}
+      >
+        <SearchReference />
 
-        <View style={styles.main}>
+        <ModuleList />
 
-            <HomeHeader userName="Yashar" />
+        <ReferenceCategoryList />
+      </ScrollView>
 
-            <ScrollView
-                style={styles.container}
-                showsVerticalScrollIndicator={false}
-            >
+      <FloatingRecordButton />
 
-                <SearchReference />
-
-                <FeaturedResource />
-
-                <ModuleList />
-
-                <ReferenceCategoryList />
-
-            </ScrollView>
-
-            <FloatingRecordButton />
-
-            <NavBar />
-
-        </View>
-
-    );
-
+      <NavBar />
+    </View>
+  );
 }

@@ -383,7 +383,7 @@ export default function ModuleReferences() {
                 flexDirection: "row",
                 alignItems: "center",
                 flexWrap: "wrap",
-                gap: 8,
+                gap: 45,
                 marginTop: 14,
               }}
             >

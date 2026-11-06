@@ -1,5 +1,4 @@
-
-const API_BASE_URL = "http://192.168.43.158:5000";
+﻿const API_BASE_URL = "http://localhost:5000";
 
 // Clerk token getter will be registered by the authenticated app setup.
 let authTokenGetter = null;
@@ -38,8 +37,8 @@ async function request(path, options = {}) {
   } catch (error) {
     throw new Error(
       `Cannot reach LectureLens backend at ${API_BASE_URL}. ` +
-      "Check that the server is running and your phone and computer " +
-      "are connected to the same network."
+        "Check that the server is running and your phone and computer " +
+        "are connected to the same network."
     );
   }
 
@@ -83,7 +82,7 @@ async function uploadRecording(lectureId, audioUri, title) {
   const uriWithoutQuery = audioUri.split("?")[0];
 
   const extension =
-    uriWithoutQuery.match(/\.(\w+)$/)?.[1]?.toLowerCase() ||
+    uriWithoutQuery.match(/\.([a-zA-Z0-9]+)$/)?.[1]?.toLowerCase() ||
     "m4a";
 
   const mimeTypes = {
@@ -111,7 +110,9 @@ async function uploadRecording(lectureId, audioUri, title) {
 
   try {
     response = await fetch(
-      `${API_BASE_URL}/api/recordings/lecture/${encodeURIComponent(lectureId)}`,
+      `${API_BASE_URL}/api/recordings/lecture/${encodeURIComponent(
+        lectureId
+      )}`,
       {
         method: "POST",
         headers: {
@@ -204,10 +205,21 @@ export const api = {
   getRecordingPlaybackSource: (recordingId) =>
     getRecordingPlaybackSource(recordingId),
 
-  // Transcription
+  // Faster-Whisper transcription
   transcribeRecording: (recordingId) =>
     request(
       `/api/recordings/${encodeURIComponent(recordingId)}/transcribe`,
+      {
+        method: "POST",
+      }
+    ),
+
+  // Deepgram transcription
+  transcribeRecordingDeepgram: (recordingId) =>
+    request(
+      `/api/recordings/${encodeURIComponent(
+        recordingId
+      )}/transcribe-deepgram`,
       {
         method: "POST",
       }
@@ -224,6 +236,18 @@ export const api = {
       `/api/recordings/${encodeURIComponent(recordingId)}/summarize`,
       {
         method: "POST",
+      }
+    ),
+
+  // Ask Gemini a question about a lecture transcript
+  askLectureQuestion: (recordingId, question) =>
+    request(
+      `/api/ai/recordings/${encodeURIComponent(recordingId)}/ask`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          question: question.trim(),
+        }),
       }
     ),
 
@@ -286,7 +310,9 @@ export const api = {
     }
 
     const url =
-      `https://api.crossref.org/works?query.bibliographic=${encodeURIComponent(trimmedQuery)}&rows=10`;
+      `https://api.crossref.org/works?query.bibliographic=${encodeURIComponent(
+        trimmedQuery
+      )}&rows=10`;
 
     let response;
 

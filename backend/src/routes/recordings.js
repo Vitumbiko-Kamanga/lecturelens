@@ -1,4 +1,3 @@
-
 const express = require("express");
 const multer = require("multer");
 const fs = require("fs");
@@ -64,7 +63,53 @@ const upload = multer({
 // Every recording endpoint requires an authenticated user.
 router.use(requireAuth);
 
-// Upload a recording for a lecture owned by the signed-in student.
+/**
+ * Helper: retrieve a recording owned by the authenticated student.
+ */
+async function getOwnedRecording(recordingId, userId) {
+  const result = await pool.query(
+    `
+      SELECT
+        r.id,
+        r.user_id,
+        r.lecture_id,
+        r.stored_filename,
+        r.original_filename,
+        r.mime_type,
+        r.title
+      FROM recordings r
+      JOIN lectures l ON l.id = r.lecture_id
+      JOIN modules m ON m.id = l.module_id
+      WHERE r.id = $1
+        AND r.user_id = $2
+        AND m.user_id = $2
+    `,
+    [recordingId, userId]
+  );
+
+  return result.rows[0] || null;
+}
+
+/**
+ * Helper: safely resolve a stored recording's file path.
+ */
+function getRecordingFilePath(storedFilename) {
+  const recordingsDirectory = path.resolve(UPLOAD_DIR);
+  const filePath = path.resolve(
+    recordingsDirectory,
+    storedFilename
+  );
+
+  if (!filePath.startsWith(recordingsDirectory + path.sep)) {
+    return null;
+  }
+
+  return filePath;
+}
+
+/**
+ * Upload a recording for a lecture owned by the signed-in student.
+ */
 router.post(
   "/lecture/:lectureId",
   upload.single("recording"),
@@ -161,7 +206,9 @@ router.post(
   }
 );
 
-// List recordings belonging to a lecture owned by the signed-in student.
+/**
+ * List recordings belonging to a lecture owned by the signed-in student.
+ */
 router.get("/lecture/:lectureId", async (req, res) => {
   try {
     const { lectureId } = req.params;
@@ -207,39 +254,22 @@ router.post("/:recordingId/transcribe", async (req, res) => {
     const { recordingId } = req.params;
     const userId = req.auth.userId;
 
-    const recordingResult = await pool.query(
-      `
-        SELECT
-          r.id,
-          r.user_id,
-          r.stored_filename,
-          r.original_filename,
-          r.mime_type
-        FROM recordings r
-        JOIN lectures l ON l.id = r.lecture_id
-        JOIN modules m ON m.id = l.module_id
-        WHERE r.id = $1
-          AND r.user_id = $2
-          AND m.user_id = $2
-      `,
-      [recordingId, userId]
+    const recording = await getOwnedRecording(
+      recordingId,
+      userId
     );
 
-    if (recordingResult.rowCount === 0) {
+    if (!recording) {
       return res.status(404).json({
         message: "Recording not found or you do not have access to it.",
       });
     }
 
-    const recording = recordingResult.rows[0];
-
-    const recordingsDirectory = path.resolve(UPLOAD_DIR);
-    const filePath = path.resolve(
-      recordingsDirectory,
+    const filePath = getRecordingFilePath(
       recording.stored_filename
     );
 
-    if (!filePath.startsWith(recordingsDirectory + path.sep)) {
+    if (!filePath) {
       return res.status(400).json({
         message: "Invalid recording file path.",
       });
@@ -330,7 +360,8 @@ router.post("/:recordingId/transcribe", async (req, res) => {
     );
 
     return res.json({
-      message: "Recording transcribed successfully.",
+      message: "Recording transcribed successfully using Whisper.",
+      provider: "whisper",
       transcript: savedResult.rows[0],
     });
   } catch (error) {
@@ -338,6 +369,187 @@ router.post("/:recordingId/transcribe", async (req, res) => {
 
     return res.status(500).json({
       message: "Could not transcribe this recording.",
+    });
+  }
+});
+
+/**
+ * Transcribe an existing recording using Deepgram.
+ *
+ * Deepgram API key remains on the backend.
+ * This endpoint does not change the existing Whisper endpoint.
+ */
+router.post("/:recordingId/transcribe-deepgram", async (req, res) => {
+  try {
+    const { recordingId } = req.params;
+    const userId = req.auth.userId;
+
+    const apiKey = process.env.DEEPGRAM_API_KEY;
+
+    if (!apiKey) {
+      console.error("DEEPGRAM_API_KEY is missing from backend environment.");
+
+      return res.status(503).json({
+        message:
+          "Deepgram is not configured. Add DEEPGRAM_API_KEY to the backend .env file.",
+      });
+    }
+
+    const recording = await getOwnedRecording(
+      recordingId,
+      userId
+    );
+
+    if (!recording) {
+      return res.status(404).json({
+        message: "Recording not found or you do not have access to it.",
+      });
+    }
+
+    const filePath = getRecordingFilePath(
+      recording.stored_filename
+    );
+
+    if (!filePath) {
+      return res.status(400).json({
+        message: "Invalid recording file path.",
+      });
+    }
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        message: "The recording file could not be found.",
+      });
+    }
+
+    const audioBuffer = await fs.promises.readFile(filePath);
+
+    const deepgramUrl =
+      "https://api.deepgram.com/v1/listen" +
+      "?model=nova-3" +
+      "&smart_format=true" +
+      "&punctuate=true" +
+      "&paragraphs=true" +
+      "&detect_language=true";
+
+    let deepgramResponse;
+
+    try {
+      deepgramResponse = await fetch(deepgramUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Token ${apiKey}`,
+          "Content-Type":
+            recording.mime_type || "application/octet-stream",
+        },
+        body: audioBuffer,
+        signal: AbortSignal.timeout(10 * 60 * 1000),
+      });
+    } catch (error) {
+      console.error("Deepgram connection error:", error);
+
+      return res.status(503).json({
+        message:
+          "Could not connect to Deepgram. Check your internet connection and try again.",
+      });
+    }
+
+    const deepgramData = await deepgramResponse
+      .json()
+      .catch(() => null);
+
+    if (!deepgramResponse.ok) {
+      console.error(
+        "Deepgram transcription failed:",
+        deepgramResponse.status,
+        deepgramData
+      );
+
+      if (deepgramResponse.status === 401 ||
+          deepgramResponse.status === 403) {
+        return res.status(502).json({
+          message:
+            "Deepgram rejected the API key. Check DEEPGRAM_API_KEY in your backend .env file.",
+        });
+      }
+
+      return res.status(502).json({
+        message:
+          deepgramData?.err_msg ||
+          deepgramData?.message ||
+          "Deepgram could not process this recording.",
+      });
+    }
+
+    const channel =
+      deepgramData?.results?.channels?.[0];
+
+    const alternative =
+      channel?.alternatives?.[0];
+
+    const transcript = alternative?.transcript;
+
+    if (typeof transcript !== "string" || !transcript.trim()) {
+      return res.status(502).json({
+        message:
+          "Deepgram completed processing but did not return any transcript text.",
+      });
+    }
+
+    const words = alternative.words || [];
+
+    const detectedLanguage =
+      channel.detected_language ||
+      deepgramData?.metadata?.language ||
+      null;
+
+    const duration =
+      deepgramData?.metadata?.duration ?? null;
+
+    const savedResult = await pool.query(
+      `
+        INSERT INTO transcripts (
+          recording_id,
+          user_id,
+          transcript,
+          segments,
+          language,
+          language_probability,
+          duration_seconds
+        )
+        VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7)
+        ON CONFLICT (recording_id)
+        DO UPDATE SET
+          user_id = EXCLUDED.user_id,
+          transcript = EXCLUDED.transcript,
+          segments = EXCLUDED.segments,
+          language = EXCLUDED.language,
+          language_probability = EXCLUDED.language_probability,
+          duration_seconds = EXCLUDED.duration_seconds,
+          updated_at = NOW()
+        RETURNING *
+      `,
+      [
+        recording.id,
+        userId,
+        transcript,
+        JSON.stringify(words),
+        detectedLanguage,
+        null,
+        duration,
+      ]
+    );
+
+    return res.json({
+      message: "Recording transcribed successfully using Deepgram.",
+      provider: "deepgram",
+      transcript: savedResult.rows[0],
+    });
+  } catch (error) {
+    console.error("Deepgram transcription error:", error);
+
+    return res.status(500).json({
+      message: "Could not transcribe this recording using Deepgram.",
     });
   }
 });

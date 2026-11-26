@@ -6,6 +6,7 @@ import HomeHeader from "../components/home/HomeHeader";
 import SearchBar from "../components/home/SearchBar";
 import FloatingRecordButton from "../components/home/FloatingRecordButton";
 import NavBar from "../components/navbar";
+import ResponsiveScreen from "../components/common/ResponsiveScreen";
 
 import NotesStats from "../components/notes/NotesStats";
 import ModulesSection from "../components/notes/ModulesSection";
@@ -36,6 +37,7 @@ export default function Notes() {
   }, []);
 
   return (
+    <ResponsiveScreen>
     <View style={styles.main}>
       <HomeHeader userName="Vitumbiko" />
 
@@ -60,5 +62,6 @@ export default function Notes() {
 
       <NavBar />
     </View>
+    </ResponsiveScreen>
   );
 }

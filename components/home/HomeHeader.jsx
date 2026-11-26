@@ -204,7 +204,7 @@ const menuStyles = StyleSheet.create({
   },
 
   menu: {
-    width: 260,
+    width: "80%", maxWidth: 260,
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     paddingHorizontal: 16,
@@ -256,3 +256,4 @@ const menuStyles = StyleSheet.create({
     color: "#C0392B",
   },
 });
+

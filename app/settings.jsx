@@ -11,6 +11,7 @@ import { useRouter } from "expo-router";
 import styles from "../styles/settingsStyles";
 
 import NavBar from "../components/navbar";
+import ResponsiveScreen from "../components/common/ResponsiveScreen";
 import SettingsHeader from "../components/settings/SettingsHeader";
 import ProfileCard from "../components/settings/ProfileCard";
 import SectionTitle from "../components/settings/SectionTitle";
@@ -74,6 +75,7 @@ export default function Settings() {
   };
 
   return (
+    <ResponsiveScreen>
     <View style={styles.main}>
       <SettingsHeader />
 
@@ -191,5 +193,6 @@ export default function Settings() {
 
       <NavBar />
     </View>
+    </ResponsiveScreen>
   );
 }

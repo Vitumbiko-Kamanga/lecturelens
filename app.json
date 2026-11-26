@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "LectureLens",
-    "slug": "LectureLens",
+    "slug": "lecturelens",
     "version": "1.0.0",
     "scheme": "lecturelens",
     "orientation": "portrait",
@@ -21,7 +21,11 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -38,6 +42,12 @@
       ],
       "expo-asset",
       "expo-stream-audio"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ae0c9bfe-0d51-42bb-a3a4-cfabf10c4964"
+      }
+    }
   }
 }

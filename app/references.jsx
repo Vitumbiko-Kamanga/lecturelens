@@ -4,6 +4,7 @@ import { ScrollView, View } from "react-native";
 
 import HomeHeader from "../components/home/HomeHeader";
 import NavBar from "../components/navbar";
+import ResponsiveScreen from "../components/common/ResponsiveScreen";
 import FloatingRecordButton from "../components/home/FloatingRecordButton";
 
 import SearchReference from "../components/references/SearchReference";
@@ -14,6 +15,7 @@ import styles from "../styles/referencesStyles";
 
 export default function Reference() {
   return (
+    <ResponsiveScreen>
     <View style={styles.main}>
       <HomeHeader />
 
@@ -35,5 +37,6 @@ export default function Reference() {
 
       <NavBar />
     </View>
+    </ResponsiveScreen>
   );
 }

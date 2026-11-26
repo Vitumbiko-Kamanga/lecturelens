@@ -1,241 +1,128 @@
-import React from "react";
-import {
-  SafeAreaView,
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  StatusBar,
-} from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import React from 'react';
+import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useBreakpoint } from '../components/common/ResponsiveScreen';
 
-const NAVY = "#12325B";
-const GOLD = "#F2B544";
-const BG = "#F5F7FB";
-const MUTED = "#687589";
+const NAVY = '#14335C';
+const GOLD = '#F2B13E';
 
-export default function WelcomeScreen() {
+const FEATURES = [
+  { icon: 'mic-outline', title: 'Capture lectures', text: 'Record and keep lecture audio together.' },
+  { icon: 'document-text-outline', title: 'Notes and transcripts', text: 'Review lecture text and add your own notes.' },
+  { icon: 'library-outline', title: 'Organise your learning', text: 'Keep modules, lectures and resources in one place.' },
+];
+
+export default function Index() {
+  const router = useRouter();
+  const { isTablet, isDesktop } = useBreakpoint();
+  const gutter = isDesktop ? 48 : isTablet ? 32 : 16;
+
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor={NAVY} />
-
-      <View style={styles.container}>
-        <View style={styles.hero}>
-          <Text style={styles.appName}>LectureLens</Text>
-
-          {/* Application icon centered below the name */}
-          <View style={styles.logoCircle}>
-            <Ionicons name="binoculars-outline" size={34} color={NAVY} />
+    <ScrollView
+      style={styles.page}
+      contentContainerStyle={styles.pageContent}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Hero: full-bleed background, centered content */}
+      <View style={[styles.hero, { paddingHorizontal: gutter, paddingVertical: isDesktop ? 88 : 56 }]}>
+        <View style={styles.heroInner}>
+          <Text style={[styles.brand, isDesktop && { fontSize: 36 }]}>LectureLens</Text>
+          <View style={styles.logo}>
+            <MaterialCommunityIcons name="binoculars" size={40} color={NAVY} />
           </View>
-
-          <Text style={styles.headline}>
-            Learn without{"\n"}
-            <Text style={styles.goldText}>missing a moment.</Text>
+          <Text style={[styles.headline, isDesktop && { fontSize: 52, lineHeight: 60 }]}>
+            Learn without
           </Text>
-
-          <Text style={styles.description}>
-            Your lecture companion for capturing, organising and revisiting
-            lecture information.
+          <Text style={[styles.headline, styles.headlineAccent, isDesktop && { fontSize: 52, lineHeight: 60 }]}>
+            missing a moment.
+          </Text>
+          <Text style={[styles.subtitle, isDesktop && { fontSize: 18 }]}>
+            Your lecture companion for capturing, organising and revisiting lecture information.
           </Text>
         </View>
+      </View>
 
-        <View style={styles.features}>
-          <Feature
-            icon="mic-outline"
-            title="Capture lectures"
-            description="Record and keep lecture audio together."
-          />
-          <Feature
-            icon="document-text-outline"
-            title="Notes and transcripts"
-            description="Review lecture text and add your own notes."
-          />
-          <Feature
-            icon="library-outline"
-            title="Organise your learning"
-            description="Keep modules, lectures and resources in one place."
-          />
+      {/* Content: centered column with padding */}
+      <View style={[styles.content, { paddingHorizontal: gutter }]}>
+        <View style={[styles.cards, isDesktop && styles.cardsRow]}>
+          {FEATURES.map((f) => (
+            <View key={f.title} style={[styles.card, isDesktop && styles.cardDesktop]}>
+              <View style={styles.cardIcon}>
+                <Ionicons name={f.icon} size={26} color={NAVY} />
+              </View>
+              <View style={styles.cardText}>
+                <Text style={styles.cardTitle}>{f.title}</Text>
+                <Text style={styles.cardDesc}>{f.text}</Text>
+              </View>
+            </View>
+          ))}
         </View>
 
-        <View style={styles.actions}>
+        <View style={styles.cta}>
           <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push("/register")}
-            style={({ pressed }) => [
-              styles.primaryButton,
-              pressed && styles.pressed,
-            ]}
+            onPress={() => router.push('/register')}
+            style={({ pressed }) => [styles.button, pressed && { opacity: 0.85 }]}
           >
-            <Text style={styles.primaryButtonText}>Get Started</Text>
-            <Ionicons name="arrow-forward" size={19} color={NAVY} />
+            <Text style={styles.buttonText}>Get Started</Text>
+            <Ionicons name="arrow-forward" size={20} color={NAVY} />
           </Pressable>
 
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push("/login")}
-            style={({ pressed }) => [
-              styles.signInButton,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={styles.signInLabel}>
-              Already have an account? <Text style={styles.signInText}>Sign in</Text>
+          <Text style={styles.signin}>
+            Already have an account?{' '}
+            <Text style={styles.signinLink} onPress={() => router.push('/login')}>
+              Sign in
             </Text>
-          </Pressable>
+          </Text>
         </View>
-
-        <Text style={styles.footer}>Supporting accessible learning at MUBAS.</Text>
       </View>
-    </SafeAreaView>
-  );
-}
-
-function Feature({ icon, title, description }) {
-  return (
-    <View style={styles.featureRow}>
-      <View style={styles.featureIcon}>
-        <Ionicons name={icon} size={22} color={NAVY} />
-      </View>
-      <View style={styles.featureCopy}>
-        <Text style={styles.featureTitle}>{title}</Text>
-        <Text style={styles.featureDescription}>{description}</Text>
-      </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: BG,
-  },
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    paddingTop: 18,
-    paddingBottom: 14,
-  },
+  page: { flex: 1, backgroundColor: '#F5F7FB' },
+  pageContent: { flexGrow: 1, paddingBottom: 48 },
+
   hero: {
     backgroundColor: NAVY,
-    alignItems: "center",
-    paddingHorizontal: 22,
-    paddingTop: 70,
-    marginTop:-50,
-    paddingBottom: 14,
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
+    alignItems: 'center',
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
   },
-  appName: {
-    color: "#FFFFFF",
-    fontSize: 22,
-    fontWeight: "800",
-    textAlign: "center",
+  heroInner: { width: '100%', maxWidth: 760, alignItems: 'center' },
+  brand: { color: '#fff', fontSize: 28, fontWeight: '800', marginBottom: 20 },
+  logo: {
+    width: 80, height: 80, borderRadius: 40, backgroundColor: GOLD,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 28,
   },
-  logoCircle: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    backgroundColor: GOLD,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
+  headline: { color: '#fff', fontSize: 34, lineHeight: 42, fontWeight: '800', textAlign: 'center' },
+  headlineAccent: { color: GOLD },
+  subtitle: { color: '#E6ECF5', fontSize: 15, lineHeight: 24, textAlign: 'center', marginTop: 16 },
+
+  content: { width: '100%', maxWidth: 1100 + 96, alignSelf: 'center', marginTop: 32 },
+  cards: { gap: 16 },
+  cardsRow: { flexDirection: 'row' },
+  card: {
+    flexDirection: 'row', alignItems: 'center', gap: 16,
+    backgroundColor: '#fff', borderRadius: 18, padding: 18,
+    borderWidth: 1, borderColor: '#EEF1F6',
   },
-  headline: {
-    color: "#FFFFFF",
-    fontSize: 22,
-    lineHeight: 28,
-    fontWeight: "800",
-    textAlign: "center",
-    marginTop: 10,
+  cardDesktop: { flex: 1, flexDirection: 'column', alignItems: 'flex-start', padding: 24 },
+  cardIcon: {
+    width: 54, height: 54, borderRadius: 14, backgroundColor: '#FDF3DD',
+    alignItems: 'center', justifyContent: 'center',
   },
-  goldText: {
-    color: GOLD,
+  cardText: { flex: 1 },
+  cardTitle: { color: NAVY, fontSize: 17, fontWeight: '700' },
+  cardDesc: { color: '#5B6778', fontSize: 14, marginTop: 4, lineHeight: 20 },
+
+  cta: { width: '100%', maxWidth: 420, alignSelf: 'center', alignItems: 'center', marginTop: 40, gap: 18 },
+  button: {
+    width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 10, backgroundColor: GOLD, paddingVertical: 18, borderRadius: 16,
   },
-  description: {
-    color: "#E3EAF3",
-    fontSize: 12,
-    lineHeight: 17,
-    textAlign: "center",
-    marginTop: 7,
-    maxWidth: 310,
-  },
-  features: {
-    paddingHorizontal: 18,
-    paddingTop: 17,
-    gap: 10,
-  },
-  featureRow: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E6EBF2",
-    borderRadius: 13,
-    paddingVertical: 10,
-    paddingHorizontal: 11,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  featureIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 11,
-    backgroundColor: "#FFF3D8",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 11,
-  },
-  featureCopy: {
-    flex: 1,
-  },
-  featureTitle: {
-    color: NAVY,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  featureDescription: {
-    color: MUTED,
-    fontSize: 11,
-    lineHeight: 15,
-    marginTop: 2,
-  },
-  actions: {
-    paddingHorizontal: 18,
-    marginTop: 17,
-  },
-  primaryButton: {
-    minHeight: 48,
-    backgroundColor: GOLD,
-    borderRadius: 13,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 9,
-  },
-  primaryButtonText: {
-    color: NAVY,
-    fontSize: 15,
-    fontWeight: "800",
-  },
-  pressed: {
-    opacity: 0.78,
-  },
-  signInButton: {
-    alignItems: "center",
-    paddingVertical: 10,
-  },
-  signInLabel: {
-    color: MUTED,
-    fontSize: 12,
-  },
-  signInText: {
-    color: NAVY,
-    fontWeight: "800",
-  },
-  footer: {
-    color: MUTED,
-    fontSize: 10,
-    textAlign: "center",
-    paddingHorizontal: 12,
-    marginTop: 11,
-  },
+  buttonText: { color: NAVY, fontSize: 17, fontWeight: '800' },
+  signin: { color: '#5B6778', fontSize: 14 },
+  signinLink: { color: NAVY, fontWeight: '800' },
 });

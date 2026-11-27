@@ -1,4 +1,4 @@
-import { StyleSheet } from "react-native";
+﻿import { StyleSheet } from "react-native";
 
 const NAVY = "#12325B";
 const GOLD = "#F2B544";
@@ -11,18 +11,20 @@ const BORDER = "#E2E8F0";
 const styles = StyleSheet.create({
   main: {
     flex: 1,
+    width: "100%",
     backgroundColor: BACKGROUND,
   },
 
   container: {
     flex: 1,
+    width: "100%",
     backgroundColor: BACKGROUND,
     paddingHorizontal: 20,
     paddingTop: 10,
   },
 
-  // Home header
   header: {
+    width: "100%",
     backgroundColor: NAVY,
     paddingHorizontal: 20,
     paddingTop: 55,
@@ -47,7 +49,6 @@ const styles = StyleSheet.create({
     color: NAVY,
   },
 
-  // Search
   searchSection: {
     flexDirection: "row",
     alignItems: "center",
@@ -68,7 +69,6 @@ const styles = StyleSheet.create({
     color: NAVY,
   },
 
-  // Quick Actions
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
@@ -101,7 +101,6 @@ const styles = StyleSheet.create({
     color: TEXT,
   },
 
-  // Recent Lectures
   lectureCard: {
     backgroundColor: WHITE,
     borderRadius: 20,
@@ -178,18 +177,18 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  // Floating recording button
   floatingButton: {
     position: "absolute",
     bottom: 90,
-    right: 25,
+    right: 20,
     width: 65,
     height: 65,
     borderRadius: 35,
     backgroundColor: GOLD,
     justifyContent: "center",
     alignItems: "center",
-    elevation: 8,
+    elevation: 10,
+    zIndex: 10,
   },
 });
 

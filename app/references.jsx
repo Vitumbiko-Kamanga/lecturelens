@@ -1,5 +1,4 @@
-
-import React from "react";
+﻿import React from "react";
 import { ScrollView, View } from "react-native";
 
 import HomeHeader from "../components/home/HomeHeader";
@@ -15,28 +14,31 @@ import styles from "../styles/referencesStyles";
 
 export default function Reference() {
   return (
-    <ResponsiveScreen>
-    <View style={styles.main}>
-      <HomeHeader />
+    <ResponsiveScreen
+      scroll={false}
+      contentStyle={{ paddingHorizontal: 0 }}
+    >
+      <View style={styles.main}>
+        <HomeHeader />
 
-      <ScrollView
-        style={styles.container}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingBottom: 110,
-        }}
-      >
-        <SearchReference />
+        <ScrollView
+          style={styles.container}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            paddingBottom: 160,
+          }}
+        >
+          <SearchReference />
 
-        <ModuleList />
+          <ModuleList />
 
-        <ReferenceCategoryList />
-      </ScrollView>
+          <ReferenceCategoryList />
+        </ScrollView>
 
-      <FloatingRecordButton />
+        <FloatingRecordButton />
 
-      <NavBar />
-    </View>
+        <NavBar fullBleed />
+      </View>
     </ResponsiveScreen>
   );
 }

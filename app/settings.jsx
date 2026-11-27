@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   ScrollView,
   View,
@@ -75,124 +75,130 @@ export default function Settings() {
   };
 
   return (
-    <ResponsiveScreen>
-    <View style={styles.main}>
-      <SettingsHeader />
+    <ResponsiveScreen
+      scroll={false}
+      contentStyle={{ paddingHorizontal: 0 }}
+    >
+      <View style={styles.main}>
+        <SettingsHeader />
 
-      <ScrollView
-        style={styles.container}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-      >
-        <ProfileCard
-          onPress={() => router.push("/profile")}
-        />
+        <ScrollView
+          style={styles.container}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: 160 },
+          ]}
+        >
+          <ProfileCard
+            onPress={() => router.push("/profile")}
+          />
 
-        <SectionTitle title="ACCOUNT" />
+          <SectionTitle title="ACCOUNT" />
 
-        <SettingItem
-          icon="person-outline"
-          title="Profile Information"
-          subtitle="View and edit your profile"
-          onPress={() => router.push("/profile")}
-        />
+          <SettingItem
+            icon="person-outline"
+            title="Profile Information"
+            subtitle="View and edit your profile"
+            onPress={() => router.push("/profile")}
+          />
 
-        <SettingItem
-          icon="shield-checkmark-outline"
-          title="Account & Security"
-          subtitle="Password and security settings"
-          onPress={() => router.push("/security")}
-        />
+          <SettingItem
+            icon="shield-checkmark-outline"
+            title="Account & Security"
+            subtitle="Password and security settings"
+            onPress={() => router.push("/security")}
+          />
 
-        <SettingItem
-          icon="cloud-outline"
-          title="Backup & Sync"
-          subtitle="Manage cloud backup"
-          onPress={() => showComingSoon("Backup & Sync")}
-        />
+          <SettingItem
+            icon="cloud-outline"
+            title="Backup & Sync"
+            subtitle="Manage cloud backup"
+            onPress={() => showComingSoon("Backup & Sync")}
+          />
 
-        <SectionTitle title="PREFERENCES" />
+          <SectionTitle title="PREFERENCES" />
 
-        <SettingSwitch
-          icon="notifications-outline"
-          title="Notifications"
-          subtitle={
-            notifications
-              ? "Notifications enabled"
-              : "Notifications disabled"
-          }
-          value={notifications}
-          onValueChange={setNotifications}
-        />
+          <SettingSwitch
+            icon="notifications-outline"
+            title="Notifications"
+            subtitle={
+              notifications
+                ? "Notifications enabled"
+                : "Notifications disabled"
+            }
+            value={notifications}
+            onValueChange={setNotifications}
+          />
 
-        <SettingItem
-          icon="color-palette-outline"
-          title="Appearance"
-          subtitle="Light Theme"
-          onPress={() => showComingSoon("Appearance")}
-        />
+          <SettingItem
+            icon="color-palette-outline"
+            title="Appearance"
+            subtitle="Light Theme"
+            onPress={() => showComingSoon("Appearance")}
+          />
 
-        <SettingItem
-          icon="language-outline"
-          title="Language"
-          subtitle="English"
-          onPress={() => showComingSoon("Language")}
-        />
+          <SettingItem
+            icon="language-outline"
+            title="Language"
+            subtitle="English"
+            onPress={() => showComingSoon("Language")}
+          />
 
-        <SettingSwitch
-          icon="download-outline"
-          title="Offline Mode"
-          subtitle={
-            offline
-              ? "Offline mode enabled"
-              : "Offline mode disabled"
-          }
-          value={offline}
-          onValueChange={(value) => {
-            setOffline(value);
+          <SettingSwitch
+            icon="download-outline"
+            title="Offline Mode"
+            subtitle={
+              offline
+                ? "Offline mode enabled"
+                : "Offline mode disabled"
+            }
+            value={offline}
+            onValueChange={(value) => {
+              setOffline(value);
 
-            Alert.alert(
-              value ? "Offline Mode" : "Offline Mode Disabled",
-              value
-                ? "Offline mode is enabled in Settings. Downloading and accessing content offline will require the offline feature to be implemented."
-                : "Offline mode has been disabled."
-            );
-          }}
-        />
+              Alert.alert(
+                value ? "Offline Mode" : "Offline Mode Disabled",
+                value
+                  ? "Offline mode is enabled in Settings. Downloading and accessing content offline will require the offline feature to be implemented."
+                  : "Offline mode has been disabled."
+              );
+            }}
+          />
 
-        <SectionTitle title="SUPPORT" />
+          <SectionTitle title="SUPPORT" />
 
-        <SettingItem
-          icon="help-circle-outline"
-          title="Help & FAQ"
-          subtitle="Find answers"
-          onPress={() => showComingSoon("Help & FAQ")}
-        />
+          <SettingItem
+            icon="help-circle-outline"
+            title="Help & FAQ"
+            subtitle="Find answers"
+            onPress={() => showComingSoon("Help & FAQ")}
+          />
 
-        <SettingItem
-          icon="chatbubble-outline"
-          title="Contact Us"
-          subtitle="We're here to help"
-          onPress={handleContact}
-        />
+          <SettingItem
+            icon="chatbubble-outline"
+            title="Contact Us"
+            subtitle="We're here to help"
+            onPress={handleContact}
+          />
 
-        <SettingItem
-          icon="information-circle-outline"
-          title="About LectureLens"
-          subtitle="Version 1.0.0"
-          onPress={() =>
-            Alert.alert(
-              "About LectureLens",
-              "LectureLens is an AI-powered lecture annotation system designed to support university students with partial sensory challenges.\n\nVersion 1.0.0\n\nMalawi University of Business and Applied Sciences (MUBAS)"
-            )
-          }
-        />
+          <SettingItem
+            icon="information-circle-outline"
+            title="About LectureLens"
+            subtitle="Version 1.0.0"
+            onPress={() =>
+              Alert.alert(
+                "About LectureLens",
+                "LectureLens is an AI-powered lecture annotation system designed to support university students with partial sensory challenges.\n\nVersion 1.0.0\n\nMalawi University of Business and Applied Sciences (MUBAS)"
+              )
+            }
+          />
 
-        <LogoutButton onPress={handleLogout} />
-      </ScrollView>
+          <LogoutButton onPress={handleLogout} />
+        </ScrollView>
 
-      <NavBar />
-    </View>
+        <NavBar fullBleed />
+      </View>
     </ResponsiveScreen>
   );
 }

@@ -1,0 +1,1601 @@
+
+
+==================== app/index.jsx ====================
+
+import React from 'react';
+import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useBreakpoint } from '../components/common/ResponsiveScreen';
+
+const NAVY = '#14335C';
+const GOLD = '#F2B13E';
+
+const FEATURES = [
+  { icon: 'mic-outline', title: 'Capture lectures', text: 'Record and keep lecture audio together.' },
+  { icon: 'document-text-outline', title: 'Notes and transcripts', text: 'Review lecture text and add your own notes.' },
+  { icon: 'library-outline', title: 'Organise your learning', text: 'Keep modules, lectures and resources in one place.' },
+];
+
+export default function Index() {
+  const router = useRouter();
+  const { isTablet, isDesktop } = useBreakpoint();
+  const gutter = isDesktop ? 48 : isTablet ? 32 : 16;
+
+  return (
+    <ScrollView
+      style={styles.page}
+      contentContainerStyle={styles.pageContent}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Hero: full-bleed background, centered content */}
+      <View style={[styles.hero, { paddingHorizontal: gutter, paddingVertical: isDesktop ? 88 : 56 }]}>
+        <View style={styles.heroInner}>
+          <Text style={[styles.brand, isDesktop && { fontSize: 36 }]}>LectureLens</Text>
+          <View style={styles.logo}>
+            <MaterialCommunityIcons name="binoculars" size={40} color={NAVY} />
+          </View>
+          <Text style={[styles.headline, isDesktop && { fontSize: 52, lineHeight: 60 }]}>
+            Learn without
+          </Text>
+          <Text style={[styles.headline, styles.headlineAccent, isDesktop && { fontSize: 52, lineHeight: 60 }]}>
+            missing a moment.
+          </Text>
+          <Text style={[styles.subtitle, isDesktop && { fontSize: 18 }]}>
+            Your lecture companion for capturing, organising and revisiting lecture information.
+          </Text>
+        </View>
+      </View>
+
+      {/* Content: centered column with padding */}
+      <View style={[styles.content, { paddingHorizontal: gutter }]}>
+        <View style={[styles.cards, isDesktop && styles.cardsRow]}>
+          {FEATURES.map((f) => (
+            <View key={f.title} style={[styles.card, isDesktop && styles.cardDesktop]}>
+              <View style={styles.cardIcon}>
+                <Ionicons name={f.icon} size={26} color={NAVY} />
+              </View>
+              <View style={styles.cardText}>
+                <Text style={styles.cardTitle}>{f.title}</Text>
+                <Text style={styles.cardDesc}>{f.text}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.cta}>
+          <Pressable
+            onPress={() => router.push('/register')}
+            style={({ pressed }) => [styles.button, pressed && { opacity: 0.85 }]}
+          >
+            <Text style={styles.buttonText}>Get Started</Text>
+            <Ionicons name="arrow-forward" size={20} color={NAVY} />
+          </Pressable>
+
+          <Text style={styles.signin}>
+            Already have an account?{' '}
+            <Text style={styles.signinLink} onPress={() => router.push('/login')}>
+              Sign in
+            </Text>
+          </Text>
+        </View>
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  page: { flex: 1, backgroundColor: '#F5F7FB' },
+  pageContent: { flexGrow: 1, paddingBottom: 48 },
+
+  hero: {
+    backgroundColor: NAVY,
+    alignItems: 'center',
+    borderBottomLeftRadius: 40,
+    borderBottomRightRadius: 40,
+  },
+  heroInner: { width: '100%', maxWidth: 760, alignItems: 'center' },
+  brand: { color: '#fff', fontSize: 28, fontWeight: '800', marginBottom: 20 },
+  logo: {
+    width: 80, height: 80, borderRadius: 40, backgroundColor: GOLD,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 28,
+  },
+  headline: { color: '#fff', fontSize: 34, lineHeight: 42, fontWeight: '800', textAlign: 'center' },
+  headlineAccent: { color: GOLD },
+  subtitle: { color: '#E6ECF5', fontSize: 15, lineHeight: 24, textAlign: 'center', marginTop: 16 },
+
+  content: { width: '100%', maxWidth: 1100 + 96, alignSelf: 'center', marginTop: 32 },
+  cards: { gap: 16 },
+  cardsRow: { flexDirection: 'row' },
+  card: {
+    flexDirection: 'row', alignItems: 'center', gap: 16,
+    backgroundColor: '#fff', borderRadius: 18, padding: 18,
+    borderWidth: 1, borderColor: '#EEF1F6',
+  },
+  cardDesktop: { flex: 1, flexDirection: 'column', alignItems: 'flex-start', padding: 24 },
+  cardIcon: {
+    width: 54, height: 54, borderRadius: 14, backgroundColor: '#FDF3DD',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cardText: { flex: 1 },
+  cardTitle: { color: NAVY, fontSize: 17, fontWeight: '700' },
+  cardDesc: { color: '#5B6778', fontSize: 14, marginTop: 4, lineHeight: 20 },
+
+  cta: { width: '100%', maxWidth: 420, alignSelf: 'center', alignItems: 'center', marginTop: 40, gap: 18 },
+  button: {
+    width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 10, backgroundColor: GOLD, paddingVertical: 18, borderRadius: 16,
+  },
+  buttonText: { color: NAVY, fontSize: 17, fontWeight: '800' },
+  signin: { color: '#5B6778', fontSize: 14 },
+  signinLink: { color: NAVY, fontWeight: '800' },
+});
+
+
+==================== app/login.jsx ====================
+
+import React, { useState } from "react";
+import { useSignIn } from "@clerk/expo";
+import {
+  SafeAreaView,
+  ScrollView,
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  StatusBar,
+} from "react-native";
+import { Link, router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+
+export default function LoginScreen() {
+  const { signIn, fetchStatus } = useSignIn();
+  const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleLogin() {
+    setError("");
+
+    const cleanEmail = email.trim();
+
+    if (!cleanEmail || !password) {
+      setError("Please enter your email and password.");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    if (fetchStatus === "fetching") {
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { error: createError } = await signIn.create({
+        identifier: cleanEmail,
+      });
+
+      if (createError) {
+        setError(createError.message || "Unable to start sign-in.");
+        return;
+      }
+
+      const { error: passwordError } = await signIn.password({
+        password,
+      });
+
+      if (passwordError) {
+        setError(passwordError.message || "Unable to sign in.");
+        return;
+      }
+
+      if (signIn.status === "complete") {
+        const { error: finalizeError } = await signIn.finalize();
+
+        if (finalizeError) {
+          setError(finalizeError.message || "Could not complete sign-in.");
+        }
+      } else {
+        setError(
+          "Additional verification is required. Please contact support while we configure this step."
+        );
+      }
+    } catch (error) {
+      setError(error?.message || "Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <SafeAreaView style={styles.screen}>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.navy} />
+      <KeyboardAvoidingView
+        style={styles.keyboard}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.topSection}>
+            <Pressable
+              style={styles.backButton}
+              onPress={() => router.replace("/")}
+              accessibilityRole="button"
+              accessibilityLabel="Back to welcome screen"
+            >
+              <Ionicons name="chevron-back" size={20} color={COLORS.white} />
+              <Text style={styles.backText}>Back</Text>
+            </Pressable>
+
+            <View style={styles.logoContainer}>
+              <Ionicons
+                name="binoculars-outline"
+                size={37}
+                color={COLORS.navy}
+              />
+            </View>
+
+            <Text style={styles.brand}>LectureLens</Text>
+            <Text style={styles.topCaption}>Your learning, all in focus.</Text>
+          </View>
+
+          <View style={styles.formSection}>
+            <Text style={styles.heading}>Welcome back</Text>
+            <Text style={styles.subtitle}>
+              Sign in to continue your learning journey.
+            </Text>
+
+            <View style={styles.form}>
+              <Text style={styles.label}>Email address</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons
+                  name="mail-outline"
+                  size={20}
+                  color={COLORS.muted}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your university email"
+                  placeholderTextColor={COLORS.placeholder}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="email"
+                  textContentType="emailAddress"
+                  accessibilityLabel="Email address"
+                  returnKeyType="next"
+                />
+              </View>
+
+              <Text style={styles.label}>Password</Text>
+              <View style={styles.inputContainer}>
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={20}
+                  color={COLORS.muted}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter your password"
+                  placeholderTextColor={COLORS.placeholder}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoComplete="current-password"
+                  textContentType="password"
+                  accessibilityLabel="Password"
+                  returnKeyType="done"
+                  onSubmitEditing={handleLogin}
+                />
+                <Pressable
+                  onPress={() => setShowPassword((previous) => !previous)}
+                  style={styles.passwordToggle}
+                  accessibilityRole="button"
+                  accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+                  hitSlop={8}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color={COLORS.navy}
+                  />
+                </Pressable>
+              </View>
+
+              {error ? (
+                <Text
+                  style={styles.error}
+                  accessibilityRole="alert"
+                  accessibilityLiveRegion="polite"
+                >
+                  {error}
+                </Text>
+              ) : null}
+
+              <Pressable
+                style={[
+                  styles.primaryButton,
+                  (isLoading || fetchStatus === "fetching") && styles.buttonDisabled,
+                ]}
+                onPress={handleLogin}
+                disabled={isLoading || fetchStatus === "fetching"}
+                accessibilityRole="button"
+              >
+                <Text style={styles.primaryButtonText}>
+                  {isLoading ? "Signing In..." : "Sign In"}
+                </Text>
+                {!isLoading && (
+                  <Ionicons name="arrow-forward" size={20} color={COLORS.navy} />
+                )}
+              </Pressable>
+
+              <View style={styles.registerRow}>
+                <Text style={styles.registerPrompt}>Don't have an account?</Text>
+                <Link href="/register" asChild>
+                  <Pressable accessibilityRole="button">
+                    <Text style={styles.registerLink}>Create account</Text>
+                  </Pressable>
+                </Link>
+              </View>
+            </View>
+          </View>
+
+          <Text style={styles.footer}>Supporting accessible learning at MUBAS.</Text>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+const COLORS = {
+  navy: "#12325B",
+  navyDark: "#0D2545",
+  gold: "#F2B544",
+  white: "#FFFFFF",
+  background: "#F7F9FC",
+  text: "#172B45",
+  muted: "#718096",
+  placeholder: "#9AA8B8",
+  border: "#DCE3EC",
+  error: "#B42318",
+};
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  keyboard: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 20,
+  },
+  topSection: {
+    backgroundColor: COLORS.navy,
+    paddingHorizontal: 24,
+    paddingTop: 70,
+    paddingBottom: 27,
+    alignItems: "center",
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+  },
+  backButton: {
+    position: "absolute",
+    top: 30,
+    left: 24,
+    zIndex: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  backText: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: "600",
+    marginLeft: 2,
+  },
+  logoContainer: {
+    width: 66,
+    height: 66,
+    borderRadius: 21,
+    backgroundColor: COLORS.gold,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  brand: {
+    color: COLORS.white,
+    fontSize: 23,
+    fontWeight: "800",
+    letterSpacing: 0.2,
+  },
+  topCaption: {
+    color: "#DCE7F4",
+    fontSize: 13,
+    marginTop: 5,
+  },
+  formSection: {
+    paddingHorizontal: 25,
+    paddingTop: 27,
+  },
+  heading: {
+    color: COLORS.text,
+    fontSize: 25,
+    fontWeight: "800",
+    marginBottom: 7,
+  },
+  subtitle: {
+    color: COLORS.muted,
+    fontSize: 14,
+    lineHeight: 21,
+    marginBottom: 23,
+  },
+  form: {
+    width: "100%",
+  },
+  label: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  inputContainer: {
+    minHeight: 54,
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.white,
+    borderRadius: 13,
+    paddingHorizontal: 13,
+    marginBottom: 17,
+  },
+  inputIcon: {
+    marginRight: 10,
+  },
+  input: {
+    flex: 1,
+    minHeight: 52,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: COLORS.text,
+  },
+  passwordToggle: {
+    padding: 5,
+    marginLeft: 5,
+  },
+  error: {
+    color: COLORS.error,
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: -5,
+    marginBottom: 13,
+  },
+  primaryButton: {
+    minHeight: 54,
+    backgroundColor: COLORS.gold,
+    borderRadius: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    marginTop: 4,
+    shadowColor: COLORS.navy,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  primaryButtonText: {
+    color: COLORS.navyDark,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  registerRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 22,
+  },
+  registerPrompt: {
+    color: COLORS.muted,
+    fontSize: 13,
+  },
+  registerLink: {
+    color: COLORS.navy,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  footer: {
+    color: COLORS.muted,
+    fontSize: 11,
+    textAlign: "center",
+    marginTop: 22,
+    paddingHorizontal: 20,
+  },
+});
+
+
+==================== components/home/HomeHeader.jsx ====================
+
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  Modal,
+  TouchableOpacity,
+  StyleSheet,
+} from "react-native";
+
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import { useAuth, useUser } from "@clerk/expo";
+
+import styles from "../../styles/homeStyles";
+
+export default function HomeHeader({ userName }) {
+  const [menuVisible, setMenuVisible] = useState(false);
+
+  const { signOut } = useAuth();
+  const { isLoaded, user } = useUser();
+
+  // Prefer the actual logged-in Clerk user's identity.
+  const clerkUserName =
+    user?.firstName?.trim() ||
+    user?.fullName?.trim() ||
+    user?.username?.trim() ||
+    user?.primaryEmailAddress?.emailAddress?.split("@")[0] ||
+    "";
+
+  // Keep userName as a fallback for compatibility with existing screens.
+  const displayName = clerkUserName || userName?.trim() || "";
+
+  const initial = isLoaded
+    ? displayName.charAt(0).toUpperCase() || "S"
+    : "S";
+
+  const closeMenu = () => {
+    setMenuVisible(false);
+  };
+
+  const navigateTo = (destination) => {
+    closeMenu();
+    router.push(destination);
+  };
+
+  const handleSignOut = async () => {
+    try {
+      closeMenu();
+
+      await signOut();
+
+      router.replace("/login");
+    } catch (error) {
+      console.error("Sign out failed:", error);
+    }
+  };
+
+  return (
+    <>
+      <View style={styles.header}>
+        {/* Initial of the authenticated user */}
+        <View style={styles.usernameContainer}>
+          <Text style={styles.userName}>{initial}</Text>
+        </View>
+
+        {/* LectureLens icon */}
+        <Ionicons
+          name="binoculars-outline"
+          size={28}
+          color="#FFFFFF"
+        />
+
+        {/* Menu button */}
+        <TouchableOpacity
+          onPress={() => setMenuVisible(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Open navigation menu"
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name="menu-outline"
+            size={28}
+            color="#FFFFFF"
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Navigation menu */}
+      <Modal
+        visible={menuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeMenu}
+      >
+        <View style={menuStyles.overlay}>
+          <TouchableOpacity
+            style={menuStyles.backdrop}
+            activeOpacity={1}
+            onPress={closeMenu}
+          />
+
+          <View style={menuStyles.menu}>
+            <View style={menuStyles.menuHeader}>
+              <Text style={menuStyles.menuTitle}>
+                LectureLens
+              </Text>
+
+              <TouchableOpacity
+                onPress={closeMenu}
+                accessibilityLabel="Close menu"
+              >
+                <Ionicons
+                  name="close"
+                  size={24}
+                  color="#12325B"
+                />
+              </TouchableOpacity>
+            </View>
+
+            <View style={menuStyles.divider} />
+
+            <MenuItem
+              icon="folder-open-outline"
+              title="Manage Modules"
+              onPress={() => navigateTo("/modules")}
+            />
+
+            <MenuItem
+              icon="document-text-outline"
+              title="My Notes"
+              onPress={() => navigateTo("/notes")}
+            />
+
+            <MenuItem
+              icon="book-outline"
+              title="References"
+              onPress={() => navigateTo("/references")}
+            />
+
+            <MenuItem
+              icon="settings-outline"
+              title="Settings"
+              onPress={() => navigateTo("/settings")}
+            />
+
+            <View style={menuStyles.divider} />
+
+            <MenuItem
+              icon="log-out-outline"
+              title="Sign Out"
+              onPress={handleSignOut}
+              danger
+            />
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
+}
+
+function MenuItem({ icon, title, onPress, danger = false }) {
+  return (
+    <TouchableOpacity
+      style={menuStyles.menuItem}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <Ionicons
+        name={icon}
+        size={22}
+        color={danger ? "#C0392B" : "#12325B"}
+      />
+
+      <Text
+        style={[
+          menuStyles.menuItemText,
+          danger && menuStyles.dangerText,
+        ]}
+      >
+        {title}
+      </Text>
+
+      <Ionicons
+        name="chevron-forward-outline"
+        size={18}
+        color="#98A2B3"
+      />
+    </TouchableOpacity>
+  );
+}
+
+const menuStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    justifyContent: "flex-start",
+    alignItems: "flex-end",
+    paddingTop: 105,
+    paddingHorizontal: 16,
+    backgroundColor: "rgba(0, 0, 0, 0.35)",
+  },
+
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+
+  menu: {
+    width: "80%", maxWidth: 260,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    elevation: 8,
+    shadowColor: "#000000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+
+  menuHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+
+  menuTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#12325B",
+  },
+
+  divider: {
+    height: 1,
+    backgroundColor: "#E2E8F0",
+    marginVertical: 8,
+  },
+
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+  },
+
+  menuItemText: {
+    flex: 1,
+    marginLeft: 12,
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#344054",
+  },
+
+  dangerText: {
+    color: "#C0392B",
+  },
+});
+
+
+
+==================== styles/homeStyles.js ====================
+
+import { StyleSheet } from "react-native";
+
+const NAVY = "#12325B";
+const GOLD = "#F2B544";
+const BACKGROUND = "#F5F7FB";
+const WHITE = "#FFFFFF";
+const TEXT = "#344054";
+const MUTED = "#667085";
+const BORDER = "#E2E8F0";
+
+const styles = StyleSheet.create({
+  main: {
+    flex: 1,
+    backgroundColor: BACKGROUND,
+  },
+
+  container: {
+    flex: 1,
+    backgroundColor: BACKGROUND,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+
+  // Home header
+  header: {
+    backgroundColor: NAVY,
+    paddingHorizontal: 20,
+    paddingTop: 55,
+    paddingBottom: 18,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  usernameContainer: {
+    backgroundColor: GOLD,
+    width: 42,
+    height: 42,
+    borderRadius: 50,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  userName: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: NAVY,
+  },
+
+  // Search
+  searchSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: WHITE,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 16,
+    marginBottom: 30,
+    borderWidth: 1,
+    borderColor: BORDER,
+    elevation: 2,
+  },
+
+  searchInput: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 16,
+    color: NAVY,
+  },
+
+  // Quick Actions
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: NAVY,
+    marginBottom: 16,
+  },
+
+  actionsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+
+  actionCard: {
+    width: "48%",
+    backgroundColor: WHITE,
+    paddingVertical: 24,
+    borderRadius: 18,
+    alignItems: "center",
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: BORDER,
+    elevation: 2,
+  },
+
+  actionTitle: {
+    marginTop: 12,
+    fontSize: 14,
+    fontWeight: "600",
+    color: TEXT,
+  },
+
+  // Recent Lectures
+  lectureCard: {
+    backgroundColor: WHITE,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: BORDER,
+    elevation: 2,
+  },
+
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  lectureTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: NAVY,
+  },
+
+  lectureDate: {
+    color: MUTED,
+    marginTop: 5,
+  },
+
+  statusBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginTop: 15,
+    backgroundColor: NAVY,
+  },
+
+  statusText: {
+    color: WHITE,
+    fontWeight: "600",
+  },
+
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 20,
+  },
+
+  primaryButton: {
+    flex: 1,
+    backgroundColor: NAVY,
+    padding: 12,
+    borderRadius: 12,
+    alignItems: "center",
+    marginRight: 10,
+  },
+
+  secondaryButton: {
+    flex: 1,
+    backgroundColor: WHITE,
+    borderWidth: 1,
+    borderColor: NAVY,
+    padding: 12,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+
+  primaryButtonText: {
+    color: WHITE,
+    fontWeight: "700",
+  },
+
+  secondaryButtonText: {
+    color: NAVY,
+    fontWeight: "700",
+  },
+
+  // Floating recording button
+  floatingButton: {
+    position: "absolute",
+    bottom: 90,
+    right: 25,
+    width: 65,
+    height: 65,
+    borderRadius: 35,
+    backgroundColor: GOLD,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 8,
+  },
+});
+
+export default styles;
+
+
+==================== components/navbar.jsx ====================
+
+
+import React from "react";
+import { StyleSheet, View } from "react-native";
+
+import NavLink from "./navelement.jsx";
+
+const NAVY = "#12325B";
+const WHITE = "#FFFFFF";
+const BORDER = "#E2E8F0";
+
+export default function NavBar() {
+  return (
+    <View style={styles.dash}>
+      <NavLink
+        name="home-outline"
+        title="Home"
+        href="/home"
+      />
+
+      <NavLink
+        name="book-outline"
+        title="Notes"
+        href="/notes"
+      />
+
+      <NavLink
+        name="reader-outline"
+        title="References"
+        href="/references"
+      />
+
+      <NavLink
+        name="settings-outline"
+        title="Settings"
+        href="/settings"
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  dash: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    width: "100%",
+    position: "absolute",
+    bottom: 0,
+    paddingTop: 8,
+    paddingBottom: 20,
+    backgroundColor: WHITE,
+    borderTopWidth: 1,
+    borderTopColor: BORDER,
+    elevation: 8,
+    shadowColor: NAVY,
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+  },
+});
+
+
+==================== app/home.jsx ====================
+
+import React from "react";
+import { useRouter } from "expo-router";
+import {
+  ScrollView,
+  View,
+} from "react-native";
+import { useUser } from "@clerk/expo";
+
+import NavBar from "../components/navbar";
+import HomeHeader from "../components/home/HomeHeader";
+import SearchBar from "../components/home/SearchBar";
+import QuickActions from "../components/home/QuickActions";
+import RecentLectures from "../components/home/RecentLectures";
+import FloatingRecordButton from "../components/home/FloatingRecordButton";
+import ResponsiveScreen from "../components/common/ResponsiveScreen";
+
+import styles from "../styles/homeStyles";
+
+export default function Home() {
+  const { user, isLoaded } = useUser();
+  const router = useRouter();
+
+  const userName = isLoaded
+    ? user?.firstName || user?.username || "Student"
+    : "Student";
+
+  return (
+    <ResponsiveScreen>
+      <View style={styles.main}>
+        <HomeHeader userName={userName} />
+
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={{ paddingBottom: 96 }}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+          overScrollMode="never"
+          keyboardShouldPersistTaps="handled"
+        >
+          <SearchBar />
+          <QuickActions />
+          <RecentLectures />
+        </ScrollView>
+
+        <FloatingRecordButton />
+        <NavBar />
+      </View>
+    </ResponsiveScreen>
+  );
+}
+
+
+==================== components/home/FloatingRecordButton.jsx ====================
+
+
+import React, { useState } from "react";
+import {
+    ActivityIndicator,
+    Alert,
+    Modal,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import {
+    AudioModule,
+    RecordingPresets,
+    setAudioModeAsync,
+    useAudioRecorder,
+} from "expo-audio";
+
+import { api } from "../../services/api";
+import styles from "../../styles/homeStyles";
+
+const NAVY = "#12325B";
+const GOLD = "#F2B544";
+const MUTED = "#667085";
+
+function getItems(result, key) {
+    if (Array.isArray(result)) return result;
+    if (Array.isArray(result?.[key])) return result[key];
+    return [];
+}
+
+export default function FloatingRecordButton() {
+    const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+
+    const [isRecording, setIsRecording] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [selectionVisible, setSelectionVisible] = useState(false);
+    const [loadingLectures, setLoadingLectures] = useState(false);
+    const [lectures, setLectures] = useState([]);
+    const [selectedLecture, setSelectedLecture] = useState(null);
+    const [selectionError, setSelectionError] = useState("");
+
+    async function openLectureSelection() {
+        setSelectionVisible(true);
+        setLoadingLectures(true);
+        setSelectionError("");
+        setLectures([]);
+
+        try {
+            const moduleResult = await api.listModules();
+            const modules = getItems(moduleResult, "modules");
+
+            if (modules.length === 0) {
+                setSelectionError(
+                    "You have no modules yet. Create a module and add a lecture first."
+                );
+                return;
+            }
+
+            const groups = await Promise.all(
+                modules.map(async (module) => {
+                    const result = await api.listLectures(module.id);
+                    const moduleLectures = getItems(result, "lectures");
+
+                    return moduleLectures.map((lecture) => ({
+                        ...lecture,
+                        moduleName: module.name,
+                    }));
+                })
+            );
+
+            const allLectures = groups.flat();
+
+            setLectures(allLectures);
+
+            if (allLectures.length === 0) {
+                setSelectionError(
+                    "You have no saved lectures. Add a lecture before recording."
+                );
+            }
+        } catch (error) {
+            setSelectionError(
+                error.message || "Could not load your lectures. Please try again."
+            );
+        } finally {
+            setLoadingLectures(false);
+        }
+    }
+
+    async function startRecording(lecture) {
+        try {
+            setIsProcessing(true);
+
+            const permission =
+                await AudioModule.requestRecordingPermissionsAsync();
+
+            if (!permission.granted) {
+                Alert.alert(
+                    "Microphone permission required",
+                    "Allow LectureLens to access your microphone in your device settings before recording."
+                );
+                return;
+            }
+
+            await setAudioModeAsync({
+                allowsRecording: true,
+                playsInSilentMode: true,
+            });
+
+            await recorder.prepareToRecordAsync();
+            recorder.record();
+
+            setSelectedLecture(lecture);
+            setIsRecording(true);
+        } catch (error) {
+            console.error("Start recording error:", error);
+
+            Alert.alert(
+                "Recording failed",
+                error?.message ||
+                    "LectureLens could not start recording. Please try again."
+            );
+        } finally {
+            setIsProcessing(false);
+        }
+    }
+
+    async function stopRecording() {
+        try {
+            setIsProcessing(true);
+
+            await recorder.stop();
+            setIsRecording(false);
+
+            await setAudioModeAsync({
+                allowsRecording: false,
+                playsInSilentMode: true,
+            });
+
+            const audioUri = recorder.uri;
+
+            if (!audioUri) {
+                Alert.alert(
+                    "Recording stopped",
+                    "The recording stopped, but no audio file location was returned."
+                );
+                return;
+            }
+
+            if (!selectedLecture?.id) {
+                Alert.alert(
+                    "Lecture not selected",
+                    `The recording is on your device at:\n\n${audioUri}`
+                );
+                return;
+            }
+
+            try {
+                const title =
+                    `${selectedLecture.title || "Lecture recording"} - Recording`;
+
+                const result = await api.uploadRecording(
+                    selectedLecture.id,
+                    audioUri,
+                    title
+                );
+
+                Alert.alert(
+                    "Upload successful",
+                    `Your recording has been uploaded to:\n${selectedLecture.title || "Selected lecture"}`
+                );
+
+                console.log("LectureLens recording upload result:", result);
+            } catch (uploadError) {
+                console.error("Recording upload error:", uploadError);
+
+                Alert.alert(
+                    "Upload failed",
+                    `Your recording is still available on your device:\n\n${audioUri}\n\nReason: ${
+                        uploadError.message || "Please try again."
+                    }`
+                );
+            }
+        } catch (error) {
+            console.error("Stop recording error:", error);
+
+            Alert.alert(
+                "Could not stop recording",
+                error?.message ||
+                    "Something went wrong while stopping the recording."
+            );
+        } finally {
+            setIsRecording(false);
+            setIsProcessing(false);
+        }
+    }
+
+    async function handlePress() {
+        if (isProcessing) return;
+
+        if (isRecording) {
+            await stopRecording();
+            return;
+        }
+
+        await openLectureSelection();
+    }
+
+    async function handleLectureSelect(lecture) {
+        setSelectionVisible(false);
+        await startRecording(lecture);
+    }
+
+    return (
+        <>
+            <View style={{ alignItems: "center" }}>
+                <TouchableOpacity
+                    style={[
+                        styles.floatingButton,
+                        isRecording && { backgroundColor: "#C62828" },
+                        isProcessing && { opacity: 0.6 },
+                    ]}
+                    onPress={handlePress}
+                    disabled={isProcessing}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                        isRecording
+                            ? "Stop and upload lecture recording"
+                            : "Choose a lecture and start recording"
+                    }
+                >
+                    <Ionicons
+                        name={isRecording ? "stop" : "mic"}
+                        size={32}
+                        color="#FFFFFF"
+                    />
+                </TouchableOpacity>
+
+                {isRecording && (
+                    <Text
+                        style={{
+                            marginTop: 6,
+                            color: "#C62828",
+                            fontWeight: "600",
+                        }}
+                    >
+                        Recording: {selectedLecture?.title || "Lecture"}
+                    </Text>
+                )}
+
+                {isProcessing && (
+                    <Text style={{ marginTop: 4, fontSize: 12 }}>
+                        Please wait...
+                    </Text>
+                )}
+            </View>
+
+            <Modal
+                visible={selectionVisible}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setSelectionVisible(false)}
+            >
+                <View
+                    style={{
+                        flex: 1,
+                        justifyContent: "flex-end",
+                        backgroundColor: "rgba(0,0,0,0.45)",
+                    }}
+                >
+                    <View
+                        style={{
+                            maxHeight: "75%",
+                            backgroundColor: "#F5F7FA",
+                            borderTopLeftRadius: 20,
+                            borderTopRightRadius: 20,
+                            padding: 20,
+                        }}
+                    >
+                        <View
+                            style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                marginBottom: 8,
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    color: NAVY,
+                                    fontSize: 21,
+                                    fontWeight: "800",
+                                    flex: 1,
+                                }}
+                            >
+                                Choose a lecture
+                            </Text>
+
+                            <TouchableOpacity
+                                onPress={() => setSelectionVisible(false)}
+                                accessibilityRole="button"
+                                accessibilityLabel="Close lecture selection"
+                            >
+                                <Ionicons
+                                    name="close"
+                                    size={28}
+                                    color={NAVY}
+                                />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text
+                            style={{
+                                color: MUTED,
+                                marginBottom: 14,
+                                lineHeight: 20,
+                            }}
+                        >
+                            Select the lecture to which this recording should
+                            be saved.
+                        </Text>
+
+                        {loadingLectures ? (
+                            <View style={{ padding: 28, alignItems: "center" }}>
+                                <ActivityIndicator size="large" color={NAVY} />
+                                <Text style={{ marginTop: 10, color: MUTED }}>
+                                    Loading your lectures...
+                                </Text>
+                            </View>
+                        ) : selectionError ? (
+                            <View style={{ paddingVertical: 16 }}>
+                                <Text
+                                    style={{
+                                        color: selectionError.includes("Could not")
+                                            ? "#B42318"
+                                            : MUTED,
+                                        lineHeight: 21,
+                                    }}
+                                >
+                                    {selectionError}
+                                </Text>
+
+                                {selectionError.includes("Could not") && (
+                                    <TouchableOpacity
+                                        onPress={openLectureSelection}
+                                        style={{
+                                            backgroundColor: NAVY,
+                                            padding: 12,
+                                            borderRadius: 9,
+                                            alignItems: "center",
+                                            marginTop: 14,
+                                        }}
+                                    >
+                                        <Text
+                                            style={{
+                                                color: "#FFFFFF",
+                                                fontWeight: "700",
+                                            }}
+                                        >
+                                            Try again
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+
+                                {!selectionError.includes("Could not") && (
+                                    <TouchableOpacity
+                                        onPress={() => setSelectionVisible(false)}
+                                        style={{
+                                            borderColor: NAVY,
+                                            borderWidth: 1,
+                                            padding: 12,
+                                            borderRadius: 9,
+                                            alignItems: "center",
+                                            marginTop: 14,
+                                        }}
+                                    >
+                                        <Text
+                                            style={{
+                                                color: NAVY,
+                                                fontWeight: "700",
+                                            }}
+                                        >
+                                            Close
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        ) : (
+                            <ScrollView
+                                keyboardShouldPersistTaps="handled"
+                                showsVerticalScrollIndicator={false}
+                            >
+                                {lectures.map((lecture) => (
+                                    <TouchableOpacity
+                                        key={String(lecture.id)}
+                                        onPress={() => handleLectureSelect(lecture)}
+                                        disabled={isProcessing}
+                                        style={{
+                                            backgroundColor: "#FFFFFF",
+                                            borderWidth: 1,
+                                            borderColor: GOLD,
+                                            borderRadius: 12,
+                                            padding: 15,
+                                            marginBottom: 10,
+                                        }}
+                                    >
+                                        <Text
+                                            style={{
+                                                color: NAVY,
+                                                fontSize: 15,
+                                                fontWeight: "700",
+                                            }}
+                                        >
+                                            {lecture.title || "Untitled lecture"}
+                                        </Text>
+
+                                        <Text
+                                            style={{
+                                                color: MUTED,
+                                                fontSize: 13,
+                                                marginTop: 5,
+                                            }}
+                                        >
+                                            {lecture.moduleName}
+                                        </Text>
+
+                                        {!!lecture.topic && (
+                                            <Text
+                                                style={{
+                                                    color: MUTED,
+                                                    fontSize: 13,
+                                                    marginTop: 4,
+                                                }}
+                                            >
+                                                {lecture.topic}
+                                            </Text>
+                                        )}
+
+                                        <Text
+                                            style={{
+                                                color: NAVY,
+                                                fontWeight: "700",
+                                                marginTop: 10,
+                                            }}
+                                        >
+                                            Select and record
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        )}
+
+                        <TouchableOpacity
+                            onPress={() => setSelectionVisible(false)}
+                            style={{
+                                alignItems: "center",
+                                padding: 13,
+                                marginTop: 8,
+                            }}
+                        >
+                            <Text style={{ color: NAVY, fontWeight: "600" }}>
+                                Cancel
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+        </>
+    );
+}

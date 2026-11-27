@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "LectureLens",
@@ -49,6 +50,14 @@
       "eas": {
         "projectId": "ae0c9bfe-0d51-42bb-a3a4-cfabf10c4964"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/ae0c9bfe-0d51-42bb-a3a4-cfabf10c4964",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
     }
   }
 }

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import { useSignIn } from "@clerk/expo";
 import {
   SafeAreaView,
@@ -84,6 +84,7 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={styles.screen}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.navy} />
+
       <KeyboardAvoidingView
         style={styles.keyboard}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -118,12 +119,14 @@ export default function LoginScreen() {
 
           <View style={styles.formSection}>
             <Text style={styles.heading}>Welcome back</Text>
+
             <Text style={styles.subtitle}>
               Sign in to continue your learning journey.
             </Text>
 
             <View style={styles.form}>
               <Text style={styles.label}>Email address</Text>
+
               <View style={styles.inputContainer}>
                 <Ionicons
                   name="mail-outline"
@@ -131,9 +134,10 @@ export default function LoginScreen() {
                   color={COLORS.muted}
                   style={styles.inputIcon}
                 />
+
                 <TextInput
                   style={styles.input}
-                  placeholder="Enter your university email"
+                  placeholder="Email"
                   placeholderTextColor={COLORS.placeholder}
                   value={email}
                   onChangeText={setEmail}
@@ -148,6 +152,7 @@ export default function LoginScreen() {
               </View>
 
               <Text style={styles.label}>Password</Text>
+
               <View style={styles.inputContainer}>
                 <Ionicons
                   name="lock-closed-outline"
@@ -155,6 +160,7 @@ export default function LoginScreen() {
                   color={COLORS.muted}
                   style={styles.inputIcon}
                 />
+
                 <TextInput
                   style={styles.input}
                   placeholder="Enter your password"
@@ -169,6 +175,7 @@ export default function LoginScreen() {
                   returnKeyType="done"
                   onSubmitEditing={handleLogin}
                 />
+
                 <Pressable
                   onPress={() => setShowPassword((previous) => !previous)}
                   style={styles.passwordToggle}
@@ -206,6 +213,7 @@ export default function LoginScreen() {
                 <Text style={styles.primaryButtonText}>
                   {isLoading ? "Signing In..." : "Sign In"}
                 </Text>
+
                 {!isLoading && (
                   <Ionicons name="arrow-forward" size={20} color={COLORS.navy} />
                 )}
@@ -213,6 +221,7 @@ export default function LoginScreen() {
 
               <View style={styles.registerRow}>
                 <Text style={styles.registerPrompt}>Don't have an account?</Text>
+
                 <Link href="/register" asChild>
                   <Pressable accessibilityRole="button">
                     <Text style={styles.registerLink}>Create account</Text>
@@ -222,7 +231,9 @@ export default function LoginScreen() {
             </View>
           </View>
 
-          <Text style={styles.footer}>Supporting accessible learning at MUBAS.</Text>
+          <Text style={styles.footer}>
+            Supporting accessible learning at MUBAS.
+          </Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -247,13 +258,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+
   keyboard: {
     flex: 1,
   },
+
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 20,
   },
+
   topSection: {
     backgroundColor: COLORS.navy,
     paddingHorizontal: 24,
@@ -263,6 +277,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
   },
+
   backButton: {
     position: "absolute",
     top: 30,
@@ -273,12 +288,14 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 4,
   },
+
   backText: {
     color: COLORS.white,
     fontSize: 14,
     fontWeight: "600",
     marginLeft: 2,
   },
+
   logoContainer: {
     width: 66,
     height: 66,
@@ -288,42 +305,50 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 8,
   },
+
   brand: {
     color: COLORS.white,
     fontSize: 23,
     fontWeight: "800",
     letterSpacing: 0.2,
   },
+
   topCaption: {
     color: "#DCE7F4",
     fontSize: 13,
     marginTop: 5,
   },
+
   formSection: {
     paddingHorizontal: 25,
     paddingTop: 27,
   },
+
   heading: {
     color: COLORS.text,
     fontSize: 25,
     fontWeight: "800",
     marginBottom: 7,
   },
+
   subtitle: {
     color: COLORS.muted,
     fontSize: 14,
     lineHeight: 21,
     marginBottom: 23,
   },
+
   form: {
     width: "100%",
   },
+
   label: {
     color: COLORS.text,
     fontSize: 14,
     fontWeight: "700",
     marginBottom: 8,
   },
+
   inputContainer: {
     minHeight: 54,
     flexDirection: "row",
@@ -335,9 +360,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
     marginBottom: 17,
   },
+
   inputIcon: {
     marginRight: 10,
   },
+
   input: {
     flex: 1,
     minHeight: 52,
@@ -345,10 +372,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.text,
   },
+
   passwordToggle: {
     padding: 5,
     marginLeft: 5,
   },
+
   error: {
     color: COLORS.error,
     fontSize: 13,
@@ -356,6 +385,7 @@ const styles = StyleSheet.create({
     marginTop: -5,
     marginBottom: 13,
   },
+
   primaryButton: {
     minHeight: 54,
     backgroundColor: COLORS.gold,
@@ -371,14 +401,17 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 2,
   },
+
   buttonDisabled: {
     opacity: 0.6,
   },
+
   primaryButtonText: {
     color: COLORS.navyDark,
     fontSize: 16,
     fontWeight: "800",
   },
+
   registerRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -387,15 +420,18 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 22,
   },
+
   registerPrompt: {
     color: COLORS.muted,
     fontSize: 13,
   },
+
   registerLink: {
     color: COLORS.navy,
     fontSize: 13,
     fontWeight: "800",
   },
+
   footer: {
     color: COLORS.muted,
     fontSize: 11,

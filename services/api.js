@@ -1,4 +1,5 @@
-﻿const API_BASE_URL = "http://localhost:5000";
+﻿
+const API_BASE_URL = "https://lecturelens-api-4udy.onrender.com";
 
 // Clerk token getter will be registered by the authenticated app setup.
 let authTokenGetter = null;
@@ -37,8 +38,8 @@ async function request(path, options = {}) {
   } catch (error) {
     throw new Error(
       `Cannot reach LectureLens backend at ${API_BASE_URL}. ` +
-        "Check that the server is running and your phone and computer " +
-        "are connected to the same network."
+        "Check your internet connection and try again. " +
+        "The Render service may need a moment to wake up."
     );
   }
 
@@ -123,7 +124,8 @@ async function uploadRecording(lectureId, audioUri, title) {
     );
   } catch (error) {
     throw new Error(
-      `Cannot upload recording to ${API_BASE_URL}. Check your network connection and ensure the backend is running.`
+      `Cannot upload recording to ${API_BASE_URL}. ` +
+        "Check your internet connection and try again."
     );
   }
 

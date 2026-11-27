@@ -424,6 +424,39 @@ router.post("/:recordingId/transcribe-deepgram", async (req, res) => {
 
     const audioBuffer = await fs.promises.readFile(filePath);
 
+    if (!audioBuffer || audioBuffer.length === 0) {
+      console.error("Deepgram transcription rejected an empty audio file:", {
+        recordingId: recording.id,
+        originalFilename: recording.original_filename,
+      });
+
+      return res.status(400).json({
+        message: "The recording file is empty. Please record the lecture again.",
+      });
+    }
+
+    // Use a canonical content type based on the saved file extension.
+    // This avoids sending generic or device-specific MIME types to Deepgram.
+    const recordingExtension = path
+      .extname(recording.original_filename || recording.stored_filename)
+      .toLowerCase();
+
+    const contentTypeByExtension = {
+      ".m4a": "audio/mp4",
+      ".mp3": "audio/mpeg",
+      ".wav": "audio/wav",
+      ".aac": "audio/aac",
+      ".mp4": "audio/mp4",
+      ".3gp": "audio/3gpp",
+      ".ogg": "audio/ogg",
+      ".webm": "audio/webm",
+    };
+
+    const deepgramContentType =
+      contentTypeByExtension[recordingExtension] ||
+      recording.mime_type ||
+      "application/octet-stream";
+
     const deepgramUrl =
       "https://api.deepgram.com/v1/listen" +
       "?model=nova-3" +
@@ -432,6 +465,15 @@ router.post("/:recordingId/transcribe-deepgram", async (req, res) => {
       "&paragraphs=true" +
       "&detect_language=true";
 
+    console.log("Sending recording to Deepgram:", {
+      recordingId: recording.id,
+      fileSizeBytes: audioBuffer.length,
+      originalFilename: recording.original_filename,
+      savedMimeType: recording.mime_type,
+      requestContentType: deepgramContentType,
+      model: "nova-3",
+    });
+
     let deepgramResponse;
 
     try {
@@ -439,14 +481,18 @@ router.post("/:recordingId/transcribe-deepgram", async (req, res) => {
         method: "POST",
         headers: {
           Authorization: `Token ${apiKey}`,
-          "Content-Type":
-            recording.mime_type || "application/octet-stream",
+          "Content-Type": deepgramContentType,
         },
         body: audioBuffer,
         signal: AbortSignal.timeout(10 * 60 * 1000),
       });
     } catch (error) {
-      console.error("Deepgram connection error:", error);
+      console.error("Deepgram connection error:", {
+        recordingId: recording.id,
+        fileSizeBytes: audioBuffer.length,
+        contentType: deepgramContentType,
+        error: error.message,
+      });
 
       return res.status(503).json({
         message:
@@ -454,22 +500,36 @@ router.post("/:recordingId/transcribe-deepgram", async (req, res) => {
       });
     }
 
-    const deepgramData = await deepgramResponse
-      .json()
-      .catch(() => null);
+    const requestId =
+      deepgramResponse.headers.get("dg-request-id") ||
+      deepgramResponse.headers.get("x-request-id") ||
+      null;
+
+    const responseText = await deepgramResponse.text();
+
+    let deepgramData = null;
+
+    try {
+      deepgramData = responseText ? JSON.parse(responseText) : null;
+    } catch {
+      deepgramData = null;
+    }
 
     if (!deepgramResponse.ok) {
-      console.error(
-        "Deepgram transcription failed:",
-        deepgramResponse.status,
-        deepgramData
-      );
+      console.error("Deepgram transcription failed:", {
+        recordingId: recording.id,
+        status: deepgramResponse.status,
+        requestId,
+        responseBody: responseText.slice(0, 1500),
+      });
 
-      if (deepgramResponse.status === 401 ||
-          deepgramResponse.status === 403) {
+      if (
+        deepgramResponse.status === 401 ||
+        deepgramResponse.status === 403
+      ) {
         return res.status(502).json({
           message:
-            "Deepgram rejected the API key. Check DEEPGRAM_API_KEY in your backend .env file.",
+            "Deepgram rejected the API key. Check DEEPGRAM_API_KEY in your backend environment.",
         });
       }
 
@@ -481,20 +541,72 @@ router.post("/:recordingId/transcribe-deepgram", async (req, res) => {
       });
     }
 
-    const channel =
-      deepgramData?.results?.channels?.[0];
-
-    const alternative =
-      channel?.alternatives?.[0];
-
+    const channel = deepgramData?.results?.channels?.[0];
+    const alternative = channel?.alternatives?.[0];
     const transcript = alternative?.transcript;
 
     if (typeof transcript !== "string" || !transcript.trim()) {
+      const channels = Array.isArray(deepgramData?.results?.channels)
+        ? deepgramData.results.channels
+        : [];
+
+      const channelDiagnostics = channels.map((item, index) => ({
+        channelIndex: index,
+        detectedLanguage: item?.detected_language || null,
+        alternativesCount: Array.isArray(item?.alternatives)
+          ? item.alternatives.length
+          : 0,
+        firstTranscriptLength:
+          typeof item?.alternatives?.[0]?.transcript === "string"
+            ? item.alternatives[0].transcript.length
+            : null,
+        firstConfidence:
+          item?.alternatives?.[0]?.confidence ?? null,
+        firstAlternativeWordCount: Array.isArray(
+          item?.alternatives?.[0]?.words
+        )
+          ? item.alternatives[0].words.length
+          : 0,
+      }));
+
+      console.warn("Deepgram returned an empty transcript:", {
+        recordingId: recording.id,
+        requestId,
+        httpStatus: deepgramResponse.status,
+        fileSizeBytes: audioBuffer.length,
+        originalFilename: recording.original_filename,
+        savedMimeType: recording.mime_type,
+        requestContentType: deepgramContentType,
+        responseDurationSeconds:
+          deepgramData?.metadata?.duration ?? null,
+        responseModel:
+          deepgramData?.metadata?.model_info?.name || null,
+        responseLanguage:
+          deepgramData?.metadata?.language || null,
+        channelCount: channels.length,
+        channelDiagnostics,
+        responseTopLevelKeys:
+          deepgramData && typeof deepgramData === "object"
+            ? Object.keys(deepgramData)
+            : [],
+      });
+
       return res.status(502).json({
         message:
-          "Deepgram completed processing but did not return any transcript text.",
+          "Deepgram processed the recording but returned no speech transcript. Please play the recording to confirm it contains clear speech, then try again.",
       });
     }
+
+    console.log("Deepgram transcription returned text:", {
+      recordingId: recording.id,
+      requestId,
+      transcriptCharacters: transcript.trim().length,
+      wordCount: Array.isArray(alternative.words)
+        ? alternative.words.length
+        : 0,
+      durationSeconds: deepgramData?.metadata?.duration ?? null,
+      detectedLanguage: channel?.detected_language || null,
+    });
 
     const words = alternative.words || [];
 

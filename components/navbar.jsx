@@ -1,6 +1,5 @@
-
-import React from "react";
-import { StyleSheet, View } from "react-native";
+﻿import React from "react";
+import { StyleSheet, View, useWindowDimensions } from "react-native";
 
 import NavLink from "./navelement.jsx";
 
@@ -8,9 +7,26 @@ const NAVY = "#12325B";
 const WHITE = "#FFFFFF";
 const BORDER = "#E2E8F0";
 
-export default function NavBar() {
+export default function NavBar({ fullBleed = false }) {
+  const { width } = useWindowDimensions();
+
+  const gutter = width >= 1100 ? 48 : width >= 768 ? 32 : 16;
+
   return (
-    <View style={styles.dash}>
+    <View
+      style={[
+        styles.dash,
+        fullBleed
+          ? {
+              left: 0,
+              right: 0,
+            }
+          : {
+              left: -gutter,
+              right: -gutter,
+            },
+      ]}
+    >
       <NavLink
         name="home-outline"
         title="Home"
@@ -43,7 +59,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    width: "100%",
     position: "absolute",
     bottom: 0,
     paddingTop: 8,
@@ -51,7 +66,8 @@ const styles = StyleSheet.create({
     backgroundColor: WHITE,
     borderTopWidth: 1,
     borderTopColor: BORDER,
-    elevation: 8,
+    elevation: 12,
+    zIndex: 20,
     shadowColor: NAVY,
     shadowOffset: {
       width: 0,

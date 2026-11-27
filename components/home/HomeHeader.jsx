@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   View,
   Text,
@@ -19,7 +19,6 @@ export default function HomeHeader({ userName }) {
   const { signOut } = useAuth();
   const { isLoaded, user } = useUser();
 
-  // Prefer the actual logged-in Clerk user's identity.
   const clerkUserName =
     user?.firstName?.trim() ||
     user?.fullName?.trim() ||
@@ -27,7 +26,6 @@ export default function HomeHeader({ userName }) {
     user?.primaryEmailAddress?.emailAddress?.split("@")[0] ||
     "";
 
-  // Keep userName as a fallback for compatibility with existing screens.
   const displayName = clerkUserName || userName?.trim() || "";
 
   const initial = isLoaded
@@ -46,9 +44,7 @@ export default function HomeHeader({ userName }) {
   const handleSignOut = async () => {
     try {
       closeMenu();
-
       await signOut();
-
       router.replace("/login");
     } catch (error) {
       console.error("Sign out failed:", error);
@@ -58,19 +54,16 @@ export default function HomeHeader({ userName }) {
   return (
     <>
       <View style={styles.header}>
-        {/* Initial of the authenticated user */}
         <View style={styles.usernameContainer}>
           <Text style={styles.userName}>{initial}</Text>
         </View>
 
-        {/* LectureLens icon */}
         <Ionicons
           name="binoculars-outline"
-          size={28}
+          size={34}
           color="#FFFFFF"
         />
 
-        {/* Menu button */}
         <TouchableOpacity
           onPress={() => setMenuVisible(true)}
           accessibilityRole="button"
@@ -85,7 +78,6 @@ export default function HomeHeader({ userName }) {
         </TouchableOpacity>
       </View>
 
-      {/* Navigation menu */}
       <Modal
         visible={menuVisible}
         transparent
@@ -101,9 +93,7 @@ export default function HomeHeader({ userName }) {
 
           <View style={menuStyles.menu}>
             <View style={menuStyles.menuHeader}>
-              <Text style={menuStyles.menuTitle}>
-                LectureLens
-              </Text>
+              <Text style={menuStyles.menuTitle}>LectureLens</Text>
 
               <TouchableOpacity
                 onPress={closeMenu}
@@ -204,7 +194,8 @@ const menuStyles = StyleSheet.create({
   },
 
   menu: {
-    width: "80%", maxWidth: 260,
+    width: "80%",
+    maxWidth: 260,
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     paddingHorizontal: 16,
@@ -256,4 +247,3 @@ const menuStyles = StyleSheet.create({
     color: "#C0392B",
   },
 });
-

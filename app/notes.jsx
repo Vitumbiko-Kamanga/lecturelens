@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from "react";
+﻿import React, { useCallback, useRef } from "react";
 import { View, ScrollView } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 
@@ -37,31 +37,34 @@ export default function Notes() {
   }, []);
 
   return (
-    <ResponsiveScreen>
-    <View style={styles.main}>
-      <HomeHeader userName="Vitumbiko" />
+    <ResponsiveScreen
+      scroll={false}
+      contentStyle={{ paddingHorizontal: 0 }}
+    >
+      <View style={styles.main}>
+        <HomeHeader userName="Vitumbiko" />
 
-      <ScrollView
-        ref={scrollRef}
-        style={styles.container}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
-      >
-        <SearchBar />
+        <ScrollView
+          ref={scrollRef}
+          style={styles.container}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 160 }}
+        >
+          <SearchBar />
 
-        <NotesStats />
+          <NotesStats />
 
-        <ModulesSection
-          initialModuleId={moduleId}
-          initialLectureId={lectureId}
-          onSelectedLectureChange={handleSelectedLectureChange}
-        />
-      </ScrollView>
+          <ModulesSection
+            initialModuleId={moduleId}
+            initialLectureId={lectureId}
+            onSelectedLectureChange={handleSelectedLectureChange}
+          />
+        </ScrollView>
 
-      <FloatingRecordButton />
+        <FloatingRecordButton />
 
-      <NavBar />
-    </View>
+        <NavBar fullBleed />
+      </View>
     </ResponsiveScreen>
   );
 }

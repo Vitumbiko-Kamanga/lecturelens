@@ -1,5 +1,4 @@
-import React from "react";
-import { useRouter } from "expo-router";
+﻿import React from "react";
 import {
   ScrollView,
   View,
@@ -18,20 +17,22 @@ import styles from "../styles/homeStyles";
 
 export default function Home() {
   const { user, isLoaded } = useUser();
-  const router = useRouter();
 
   const userName = isLoaded
     ? user?.firstName || user?.username || "Student"
     : "Student";
 
   return (
-    <ResponsiveScreen>
+    <ResponsiveScreen
+      scroll={false}
+      contentStyle={{ paddingHorizontal: 0 }}
+    >
       <View style={styles.main}>
         <HomeHeader userName={userName} />
 
         <ScrollView
           style={styles.container}
-          contentContainerStyle={{ paddingBottom: 96 }}
+          contentContainerStyle={{ paddingBottom: 160 }}
           showsVerticalScrollIndicator={false}
           bounces={false}
           overScrollMode="never"
@@ -43,7 +44,7 @@ export default function Home() {
         </ScrollView>
 
         <FloatingRecordButton />
-        <NavBar />
+        <NavBar fullBleed />
       </View>
     </ResponsiveScreen>
   );

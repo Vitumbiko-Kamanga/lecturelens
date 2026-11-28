@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -648,14 +648,15 @@ const styles = StyleSheet.create({
   floatingButton: {
     position: "absolute",
     right: 20,
-    bottom: 25,
+    bottom: 90,
     width: 62,
     height: 62,
     borderRadius: 31,
     backgroundColor: NAVY,
     alignItems: "center",
     justifyContent: "center",
-    elevation: 6,
+    elevation: 30,
+    zIndex: 1000,
     shadowColor: "#000000",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
